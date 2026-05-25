@@ -19,12 +19,20 @@ model User {
   province      String?
   municipality  String?
   active        Boolean   @default(true)
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  lastLogin     DateTime?
+  lastLoginIp   String?
+  mfaVerified   Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   assignedCases Case[]      @relation("CaseAssignee")
   ownedCases    Case[]      @relation("CaseOwner")
   auditLogs     AuditLog[]
   notifications Notification[]
+  commentItems  CaseComment[]
 
   @@map("users")
 }
@@ -32,6 +40,7 @@ model User {
 model Province {
   id        String     @id @default(uuid())
   name      String     @unique
+  code      String?
   districts District[]
   cases     Case[]
   @@map("provinces")
@@ -90,6 +99,15 @@ model Department {
   @@map("departments")
 }
 
+model MfaSession {
+  id        String   @id @default(uuid())
+  userId    String
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@map("mfa_sessions")
+}
+
 model Case {
   id                      String    @id @default(uuid())
   referenceNumber         String    @unique
@@ -136,6 +154,9 @@ model Case {
   lastUpdated             DateTime  @updatedAt
   assignedToId            String?
   assignedTo              User?     @relation("CaseAssignee", fields: [assignedToId], references: [id])
+  reassignReason          String?
+  reassignedAt            DateTime?
+  reassignedFromId        String?
   ownerId                 String?
   owner                   User?     @relation("CaseOwner", fields: [ownerId], references: [id])
   actionPlan              String?
@@ -204,62 +225,53 @@ model CaseComment {
   caseId    String
   case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   userId    String?
-  userName  String
+  user      User?    @relation(fields: [userId], references: [id])
   comment   String
   createdAt DateTime @default(now())
   @@map("case_comments")
-}
-
-model Escalation {
-  id            String   @id @default(uuid())
-  caseId        String
-  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  level         String
-  reason        String
-  escalatedTo   String
-  escalatedAt   DateTime @default(now())
-  respondedAt   DateTime?
-  response      String?
-  status        String   @default("active")
-  @@map("escalations")
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
   caseId    String?
   case      Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  action    String
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  field     String?
-  oldValue  String?
-  newValue  String?
   comment   String?
+  metadata  String?
+  ipAddress String?
   createdAt DateTime @default(now())
+  @@index([action])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 
-model Notification {
-  id        String       @id @default(uuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  message   String
-  type      String       @default("info")
-  caseId    String?
-  read      Boolean      @default(false)
-  createdAt DateTime     @default(now())
-  @@map("notifications")
+model Escalation {
+  id            String    @id @default(uuid())
+  caseId        String
+  case          Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  level         String    @default("L1")
+  escalatedTo   String?
+  reason        String?
+  status        String    @default("active")
+  response      String?
+  respondedBy   String?
+  respondedAt   DateTime?
+  escalatedAt   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  @@map("escalations")
 }
 
 model SlaConfig {
   id                  String   @id @default(uuid())
   severityLevel       String   @unique
-  responseTimeHours   Int      @default(24)
-  resolutionDays      Int      @default(7)
-  escalationAfterHours Int    @default(72)
+  responseTimeHours   Int
+  resolutionDays      Int
+  escalationAfterHours Int
   description         String?
   createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   @@map("sla_configs")
 }
 
@@ -269,16 +281,22 @@ model EscalationRule {
   condition   String
   severityMin String
   escalateTo  String
-  afterHours  Int      @default(24)
+  afterHours  Int
   enabled     Boolean  @default(true)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@map("escalation_rules")
 }
 
-model SystemConfig {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  value     String
-  updatedAt DateTime @updatedAt
-  @@map("system_configs")
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String?
+  type      String    @default("info")
+  read      Boolean   @default(false)
+  caseId    String?
+  createdAt DateTime  @default(now())
+  @@map("notifications")
 }

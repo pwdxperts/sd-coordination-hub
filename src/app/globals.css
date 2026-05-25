@@ -11,11 +11,14 @@
   --warning: #f59e0b;
   --border: #e5e7eb;
   --muted: #6b7280;
-  --sidebar-bg: #1e40af;
-  --sidebar-text: #ffffff;
-  --sidebar-hover: #1e3a8a;
-  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --card-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #1f2937;
+  --sidebar-hover: #f9fafb;
+  --sidebar-active-bg: #eff6ff;
+  --sidebar-active-text: #1e40af;
+  --sidebar-border: #e5e7eb;
+  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --card-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
 }
 
 @theme inline {
@@ -35,6 +38,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -52,10 +62,19 @@ body {
 .status-active { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
 .status-resolved { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 
-/* SA Flag accent bar */
+/* SA Flag accent bar - thicker */
 .flag-bar {
-  height: 4px;
+  height: 5px;
   background: linear-gradient(90deg, #006b3f 0%, #006b3f 20%, #ffb612 20%, #ffb612 40%, #000000 40%, #000000 50%, #ffffff 50%, #ffffff 60%, #de3535 60%, #de3535 80%, #002395 80%, #002395 100%);
+}
+
+/* Login page background pattern */
+.login-bg-pattern {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(30, 64, 175, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 80% at 80% 80%, rgba(0, 107, 63, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(255, 182, 18, 0.02) 0%, transparent 50%);
 }
 
 /* Print styles */
@@ -63,3 +82,28 @@ body {
   .no-print { display: none !important; }
   body { background: white; }
 }
+
+/* Table alternating rows */
+.table-alternate tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+/* Severity gauge colors */
+.gauge-green { stop-color: #16a34a; }
+.gauge-amber { stop-color: #f59e0b; }
+.gauge-orange { stop-color: #ea580c; }
+.gauge-red { stop-color: #dc2626; }
+
+/* Workflow step indicator */
+.workflow-step {
+  @apply flex flex-col items-center relative;
+}
+.workflow-step .step-connector {
+  @apply absolute top-4 left-1/2 w-full h-0.5;
+}
+.workflow-step:last-child .step-connector { display: none; }
+.workflow-step.completed .step-dot { @apply bg-green-500 ring-4 ring-green-100; }
+.workflow-step.current .step-dot { @apply bg-blue-600 ring-4 ring-blue-100; }
+.workflow-step.pending .step-dot { @apply bg-gray-300 ring-4 ring-gray-50; }
+.workflow-step.blocked .step-dot { @apply bg-red-500 ring-4 ring-red-100; }
+.workflow-step.escalated .step-dot { @apply bg-orange-500 ring-4 ring-orange-100; }

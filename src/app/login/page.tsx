@@ -40,39 +40,127 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4">
-      {/* Background pattern */}
+    <div className="min-h-screen flex items-center justify-center px-4 login-bg-pattern">
+      {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-blue-50/60 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-blue-100/40 blur-3xl" />
+        {/* Subtle flag watermark */}
+        <div className="absolute bottom-10 left-10 opacity-[0.03]">
+          <svg width="200" height="140" viewBox="0 0 100 70">
+            <rect width="100" height="14" fill="#006b3f"/>
+            <rect y="14" width="100" height="14" fill="#ffb612"/>
+            <rect y="28" width="100" height="14" fill="#000000"/>
+            <rect y="42" width="100" height="14" fill="#ffffff"/>
+            <rect y="56" width="100" height="14" fill="#de3535"/>
+          </svg>
+        </div>
       </div>
 
-      <div className="relative w-full max-w-[420px]">
-        {/* Flag accent line */}
+      <div className="relative w-full max-w-[440px]">
+        {/* Flag accent bar at top */}
         <div className="flag-bar rounded-t-xl" />
 
         {/* Login Card */}
         <div className="bg-white rounded-b-xl rounded-tr-xl shadow-2xl border border-gray-100 overflow-hidden">
-          {/* Header */}
+          {/* Header with Coat of Arms */}
           <div className="px-8 pt-10 pb-6 text-center">
-            {/* Coat of Arms placeholder */}
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center border-2 border-blue-100">
-              <svg viewBox="0 0 100 100" className="w-10 h-10 text-blue-900" fill="currentColor">
-                <path d="M50 10C27.9 10 10 27.9 10 50s17.9 40 40 40 40-17.9 40-40S72.1 10 50 10zm0 72c-17.6 0-32-14.4-32-32s14.4-32 32-32 32 14.4 32 32-14.4 32-32 32z" opacity="0.3"/>
-                <path d="M50 20c-16.6 0-30 13.4-30 30s13.4 30 30 30 30-13.4 30-30-13.4-30-30-30zm0 52c-12.2 0-22-9.8-22-22s9.8-22 22-22 22 9.8 22 22-9.8 22-22 22z" opacity="0.2"/>
-                <path d="M50 26c-13.3 0-24 10.7-24 24s10.7 24 24 24 24-10.7 24-24-10.7-24-24-24zm8.5 30.1L50 48.1l-8.5 8 3.3-11.3-8.6-6.4h10.6L50 27.1l3.2 11.3h10.6l-8.6 6.4 3.3 11.3z" fill="#1e40af"/>
+            {/* South African Coat of Arms SVG */}
+            <div className="mx-auto mb-5 w-24 h-24">
+              <svg viewBox="0 0 200 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Eagle with spread wings */}
+                <g transform="translate(100, 25)">
+                  {/* Wings */}
+                  <path d="M-70 10 C-85 -15 -55 -35 -35 -25 C-25 -20 -15 -10 -8 -2 L-70 10Z" fill="#FFB612" stroke="#000" strokeWidth="0.5"/>
+                  <path d="M70 10 C85 -15 55 -35 35 -25 C25 -20 15 -10 8 -2 L70 10Z" fill="#FFB612" stroke="#000" strokeWidth="0.5"/>
+                  {/* Eagle body */}
+                  <ellipse cx="0" cy="5" rx="8" ry="14" fill="#FFB612" stroke="#000" strokeWidth="0.5"/>
+                  {/* Head */}
+                  <circle cx="0" cy="-12" r="5" fill="#000"/>
+                  {/* Eye */}
+                  <circle cx="1.5" cy="-13" r="1.5" fill="white"/>
+                  <circle cx="1.5" cy="-13" r="0.7" fill="#000"/>
+                  {/* Beak */}
+                  <path d="M0 -8 L-2 -5 L2 -5Z" fill="#FFB612"/>
+                </g>
+
+                {/* Shield */}
+                <g transform="translate(100, 68)">
+                  <path d="M-22 -25 L22 -25 L28 10 C28 25 0 40 0 40 C0 40 -28 25 -28 10Z" fill="#006b3f" stroke="#000" strokeWidth="0.8"/>
+                  {/* Shield inner - left figure */}
+                  <path d="M-15 -10 C-15 -10 -10 -5 -10 0 C-10 8 -20 8 -20 0 C-20 -5 -15 -10 -15 -10Z" fill="#FFB612" stroke="#000" strokeWidth="0.3"/>
+                  {/* Shield inner - right figure */}
+                  <path d="M15 -10 C15 -10 10 -5 10 0 C10 8 20 8 20 0 C20 -5 15 -10 15 -10Z" fill="#FFB612" stroke="#000" strokeWidth="0.3"/>
+                  {/* Shield divider */}
+                  <line x1="-28" y1="-5" x2="28" y2="-5" stroke="#000" strokeWidth="0.5"/>
+                  {/* Small dots on shield */}
+                  <circle cx="-8" cy="12" r="1" fill="#FFB612"/>
+                  <circle cx="8" cy="12" r="1" fill="#FFB612"/>
+                  <circle cx="0" cy="18" r="1" fill="#FFB612"/>
+                </g>
+
+                {/* Spears crossed behind shield */}
+                <g transform="translate(100, 68)">
+                  <line x1="-45" y1="35" x2="15" y2="-30" stroke="#006b3f" strokeWidth="2.5" strokeLinecap="round"/>
+                  <line x1="45" y1="35" x2="-15" y2="-30" stroke="#006b3f" strokeWidth="2.5" strokeLinecap="round"/>
+                  {/* Spear tips */}
+                  <circle cx="15" cy="-30" r="2" fill="#FFB612"/>
+                  <circle cx="-15" cy="-30" r="2" fill="#FFB612"/>
+                </g>
+
+                {/* Wheat stalks */}
+                <g transform="translate(100, 115)">
+                  {/* Left stalk */}
+                  <path d="M-30 0 C-35 -10 -45 -15 -50 -25" stroke="#FFB612" strokeWidth="1.5" fill="none"/>
+                  <path d="M-30 0 C-25 -10 -15 -15 -10 -25" stroke="#FFB612" strokeWidth="1.5" fill="none"/>
+                  <circle cx="-50" cy="-25" r="2" fill="#FFB612"/>
+                  <circle cx="-10" cy="-25" r="2" fill="#FFB612"/>
+                  {/* Right stalk */}
+                  <path d="M30 0 C35 -10 45 -15 50 -25" stroke="#FFB612" strokeWidth="1.5" fill="none"/>
+                  <path d="M30 0 C25 -10 15 -15 10 -25" stroke="#FFB612" strokeWidth="1.5" fill="none"/>
+                  <circle cx="50" cy="-25" r="2" fill="#FFB612"/>
+                  <circle cx="10" cy="-25" r="2" fill="#FFB612"/>
+                  {/* Center dot */}
+                  <circle cx="0" cy="2" r="1.5" fill="#FFB612"/>
+                </g>
+
+                {/* Banner at bottom */}
+                <g transform="translate(100, 152)">
+                  <path d="M-55 0 C-55 -8 55 -8 55 0 C55 8 -55 8 -55 0Z" fill="#FFB612" stroke="#000" strokeWidth="0.5"/>
+                  {/* Text lines on banner */}
+                  <text x="0" y="2" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#006b3f" fontFamily="serif">!KE E: /XARRA //KE</text>
+                </g>
+
+                {/* Outward rays/starburst from center */}
+                <g opacity="0.3">
+                  {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(angle => {
+                    const rad = angle * Math.PI / 180;
+                    const x1 = 100 + Math.cos(rad) * 55;
+                    const y1 = 90 + Math.sin(rad) * 55;
+                    const x2 = 100 + Math.cos(rad) * 70;
+                    const y2 = 90 + Math.sin(rad) * 70;
+                    return <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#FFB612" strokeWidth="1"/>;
+                  })}
+                </g>
+
+                {/* Outer ring */}
+                <circle cx="100" cy="85" r="68" fill="none" stroke="#FFB612" strokeWidth="1" opacity="0.4"/>
+                <circle cx="100" cy="85" r="72" fill="none" stroke="#FFB612" strokeWidth="0.5" opacity="0.2"/>
               </svg>
             </div>
 
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 mb-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-blue-700 mb-1">
               Republic of South Africa
             </p>
             <p className="text-sm font-medium text-gray-600">
               Department of Cooperative Governance
             </p>
-            <h1 className="mt-2 text-xl font-bold text-gray-900 leading-tight">
+            <h1 className="mt-2 text-xl font-bold text-blue-900 leading-tight">
               National Service Delivery<br/>Coordination Hub
             </h1>
+            <p className="text-xs text-gray-500 mt-1 font-medium tracking-wider uppercase">
+              War Room Command Centre
+            </p>
           </div>
 
           {/* Divider */}
