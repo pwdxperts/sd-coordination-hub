@@ -94,11 +94,21 @@ export default function CaseDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb & Header */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href="/dashboard/cases" className="hover:text-blue-600">Cases</Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">{caseData.referenceNumber}</span>
+      {/* Back Button & Breadcrumb */}
+      <div className="flex items-center gap-3">
+        <Link
+          href="/dashboard/cases"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Cases
+        </Link>
+        <span className="text-sm text-gray-300">|</span>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Link href="/dashboard/cases" className="hover:text-blue-600">Cases</Link>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">{caseData.referenceNumber}</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4">

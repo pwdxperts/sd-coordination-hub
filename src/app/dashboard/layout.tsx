@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "War Room", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/intake", label: "Intake Queue", icon: Inbox },
   { href: "/dashboard/cases", label: "Case Board", icon: Briefcase },
   { href: "/dashboard/escalations", label: "Escalations", icon: AlertTriangle },
@@ -29,6 +29,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+
+    fetch("/api/notifications")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.count) setNotifCount(data.count);
+      })
+      .catch(() => {});
+  }, []);
 
   const currentPage = navItems.find((item) =>
     item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
@@ -47,24 +65,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sidebarCollapsed ? "w-[68px]" : "w-[240px]"
         }`}
       >
-        {/* Logo */}
+        {/* Logo only — no text */}
         <div className={`flex items-center h-16 border-b border-gray-100 px-4 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 truncate leading-tight">NSDCH</p>
-                <p className="text-[10px] text-gray-400 truncate leading-tight">CoGTA</p>
-              </div>
-            </div>
-          )}
-          {sidebarCollapsed && (
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-              <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
-            </div>
-          )}
+          <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-2"}`}>
+            <img src="/logo.jpg" alt="CoGTA" className="h-9 w-auto object-contain rounded" />
+          </div>
           {!sidebarCollapsed && (
             <button onClick={() => setSidebarCollapsed(true)} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-1">
               <ChevronLeft className="w-4 h-4" />
@@ -72,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
 
-        {/* Nav */}
+        {/* Nav — just items, no user card */}
         <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
           {navItems.map((item) => {
             const isActive = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
@@ -95,16 +100,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* User */}
+        {/* Verification Checklist */}
         {!sidebarCollapsed && (
-          <div className="border-t border-gray-100 p-3">
-            <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-gray-50">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-blue-600" />
+          <div className="border-t border-gray-100 p-3 mt-auto">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Setup Checklist</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <span className="text-gray-500">Database connected</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">User</p>
-                <p className="text-[11px] text-gray-400 truncate">Hub Analyst</p>
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <span className="text-gray-500">Auth configured</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                </div>
+                <span className="text-gray-400">MFA enabled</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                </div>
+                <span className="text-gray-400">Email intake active</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                </div>
+                <span className="text-gray-300">WhatsApp intake</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px]">
+                <div className="w-3.5 h-3.5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                </div>
+                <span className="text-gray-300">Social media scraper</span>
               </div>
             </div>
           </div>
@@ -132,10 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-              <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
-            </div>
-            <span className="font-bold text-sm text-gray-900">NSDCH - CoGTA</span>
+            <img src="/logo.jpg" alt="CoGTA" className="h-9 w-auto object-contain rounded" />
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -184,22 +216,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-400">
                 <Bell className="w-[18px] h-[18px]" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                {notifCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {notifCount > 9 ? "9+" : notifCount}
+                  </span>
+                )}
               </button>
               <div className="relative">
                 <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <User className="w-4 h-4 text-blue-600" />
                   </div>
+                  {currentUser && (
+                    <span className="text-sm text-gray-700 hidden md:block">{currentUser.name}</span>
+                  )}
                   <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden md:block" />
                 </button>
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
                     <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1">
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                        <User className="w-4 h-4" /> Profile
-                      </button>
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{currentUser?.name || "User"}</p>
+                        <p className="text-xs text-gray-500">{currentUser?.role?.replace(/_/g, " ") || "Hub Analyst"}</p>
+                      </div>
                       <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                         <Settings className="w-4 h-4" /> Settings
                       </button>
