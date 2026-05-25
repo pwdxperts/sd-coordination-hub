@@ -85,9 +85,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-2"}`}>
             <span className={`block ${sidebarCollapsed ? "h-10 w-10 overflow-hidden" : "h-12 w-[165px]"}`}>
               <img
-                src="/logo.jpg"
+                src="/logo.png"
                 alt="CoGTA"
-                className={`${sidebarCollapsed ? "h-10 w-auto max-w-none object-left" : "h-12 w-auto"} object-contain mix-blend-multiply`}
+                className={`${sidebarCollapsed ? "h-10 w-auto max-w-none object-left" : "h-12 w-auto"} object-contain`}
               />
             </span>
           </div>
@@ -188,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.jpg" alt="CoGTA" className="h-12 w-auto max-w-[170px] object-contain mix-blend-multiply" />
+            <img src="/logo.png" alt="CoGTA" className="h-12 w-auto max-w-[170px] object-contain" />
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />

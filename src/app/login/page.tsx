@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ArrowRight, ShieldCheck, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,78 +46,77 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* LEFT — Light info panel */}
-      <div className="hidden lg:flex lg:w-[440px] bg-gradient-to-b from-slate-50 to-gray-50 flex-col justify-center p-10 border-r border-gray-100">
-        <div className="mb-10">
-          <img src="/logo.jpg" alt="CoGTA" className="h-16 w-auto object-contain mb-6" />
-          <h1 className="text-xl font-bold text-gray-900 leading-snug mb-1">
+    <div className="min-h-screen flex">
+      {/* LEFT — Brand panel */}
+      <div className="hidden lg:flex lg:w-[420px] bg-white flex-col justify-between p-10 border-r border-gray-100">
+        <div>
+          <img src="/logo.png" alt="CoGTA" className="h-14 w-auto object-contain mb-10" />
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">
             National Service Delivery<br />Coordination Hub
           </h1>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            CoGTA&apos;s central platform for tracking and coordinating service delivery interventions.
+          <p className="text-sm text-gray-400 leading-relaxed max-w-xs">
+            Tracking and coordinating service delivery interventions across South Africa.
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-gray-600">Multi-channel case intake, verification, and classification</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <span className="text-sm text-gray-500">Multi-channel intake &amp; verification</span>
           </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-gray-600">Provincial &amp; municipal escalation management and tracking</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <span className="text-sm text-gray-500">Escalation management &amp; tracking</span>
           </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-gray-600">Role-based secure access for national, provincial and municipal users</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <span className="text-sm text-gray-500">Role-based secure access</span>
           </div>
-          <p className="text-[10px] text-gray-400 pt-6">
-            &copy; {new Date().getFullYear()} Department of Cooperative Governance &mdash; Republic of South Africa
+          <p className="text-[10px] text-gray-300 pt-4">
+            &copy; {new Date().getFullYear()} Department of Cooperative Governance
           </p>
         </div>
       </div>
 
       {/* RIGHT — Login form */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-[380px]">
+      <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+        <div className="w-full max-w-[360px]">
           {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-6">
-            <img src="/logo.jpg" alt="CoGTA" className="h-14 w-auto object-contain mx-auto mb-4" />
+          <div className="lg:hidden text-center mb-8">
+            <img src="/logo.png" alt="CoGTA" className="h-12 w-auto object-contain mx-auto" />
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 overflow-hidden">
-            <div className="px-8 pt-8 pb-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 mb-1">Secure Access</p>
-              <h2 className="text-lg font-bold text-gray-900">Sign In</h2>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-7 pt-7 pb-1">
+              <h2 className="text-lg font-bold text-gray-900">Sign in</h2>
               <p className="text-sm text-gray-400 mt-0.5">Enter your credentials to continue</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="px-8 pb-8 pt-4 space-y-4">
+            <form onSubmit={handleSubmit} className="px-7 pt-4 pb-7 space-y-4">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3.5 py-2.5 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                <label htmlFor="email" className="block text-xs font-medium text-gray-600 mb-1">
+                  Email
                 </label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="you@gov.za"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-xs font-medium text-gray-600 mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -126,9 +125,9 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none pr-10"
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none pr-10"
                   />
                   <button
                     type="button"
@@ -155,7 +154,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-[10px] text-gray-400 mt-4">
-            Authorized Access Only &mdash; Republic of South Africa
+            Authorized Access Only
           </p>
         </div>
       </div>

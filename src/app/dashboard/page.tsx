@@ -126,7 +126,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* War Room Header — title + date only */}
+      {/* Dashboard Header — title + date only */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 lg:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -134,7 +134,7 @@ export default function DashboardPage() {
               <CalendarDays className="w-4 h-4 text-blue-600" />
               {todayLabel}
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">War Room</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               National Service Delivery Coordination — priority cases, rapid actions.
             </p>
