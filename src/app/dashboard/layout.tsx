@@ -51,10 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className={`flex items-center h-16 border-b border-gray-100 px-4 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor">
-                  <path d="M12 2L2 7v10l10 5 10-5V7zm0 2.18l6.5 3.25v6.5L12 17.18l-6.5-3.25v-6.5z"/>
-                </svg>
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-gray-900 truncate leading-tight">NSDCH</p>
@@ -63,10 +61,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor">
-                <path d="M12 2L2 7v10l10 5 10-5V7zm0 2.18l6.5 3.25v6.5L12 17.18l-6.5-3.25v-6.5z"/>
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
             </div>
           )}
           {!sidebarCollapsed && (
@@ -136,10 +132,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor">
-                <path d="M12 2L2 7v10l10 5 10-5V7zm0 2.18l6.5 3.25v6.5L12 17.18l-6.5-3.25v-6.5z"/>
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src="/logo.jpg" alt="CoGTA" className="w-full h-full object-cover rounded-lg" />
             </div>
             <span className="font-bold text-sm text-gray-900">NSDCH - CoGTA</span>
           </div>
