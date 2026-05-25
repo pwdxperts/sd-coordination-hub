@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft, AlertTriangle, Clock, Calendar, MapPin, Building2,
   User, FileText, Activity, CheckCircle, XCircle, ChevronDown,
-  MessageSquare, Paperclip, Shield, AlertCircle,
+  MessageSquare, Paperclip, Shield, AlertCircle, UserPlus, Save, X,
 } from "lucide-react";
 
 const TABS = [
@@ -90,13 +90,19 @@ export default function CaseDetailPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [actionStatus, setActionStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
+  const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
+  const [assignmentNote, setAssignmentNote] = useState("");
 
   const fetchCase = () => {
     setLoading(true);
     fetch(`/api/cases/${params.id}`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         setCaseData(data);
+        setSelectedAssigneeId(data?.assignedToId || data?.assignedTo?.id || "");
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -109,11 +115,85 @@ export default function CaseDetailPage() {
   const refreshCase = async () => {
     const response = await fetch(`/api/cases/${params.id}`);
     if (!response.ok) throw new Error("Could not refresh case details");
-    setCaseData(await response.json());
+    const data = await response.json();
+    setCaseData(data);
+    setSelectedAssigneeId(data?.assignedToId || data?.assignedTo?.id || "");
+  };
+
+  const loadAssignableUsers = async () => {
+    setAssignmentLoading(true);
+    try {
+      const response = await fetch(`/api/users/assignable?caseId=${params.id}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Could not load assignable users");
+      }
+      const data = await response.json();
+      setAssignableUsers(data.users || []);
+    } catch (error) {
+      setActionStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Could not load assignable users.",
+      });
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
+
+  const openAssignment = async () => {
+    setActionStatus(null);
+    setAssignmentOpen(true);
+    setSelectedAssigneeId(caseData?.assignedToId || caseData?.assignedTo?.id || "");
+    setAssignmentNote("");
+    await loadAssignableUsers();
+  };
+
+  const submitAssignment = async () => {
+    if (!selectedAssigneeId) {
+      setActionStatus({ type: "error", message: "Select the person responsible for this case." });
+      return;
+    }
+
+    setSavingStatus("assigned");
+    setActionStatus(null);
+    const canMoveToAssigned = (STATUS_TRANSITIONS[caseData.status] || []).includes("assigned");
+    const payload: Record<string, string> = { assignedToId: selectedAssigneeId };
+    if (canMoveToAssigned) payload.status = "assigned";
+    if (assignmentNote.trim()) payload.actionPlan = assignmentNote.trim();
+
+    try {
+      const response = await fetch(`/api/cases/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to assign case");
+      }
+
+      await refreshCase();
+      setAssignmentOpen(false);
+      setActionStatus({ type: "success", message: "Case assigned to an individual and workflow updated." });
+    } catch (error) {
+      setActionStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Something went wrong.",
+      });
+    } finally {
+      setSavingStatus(null);
+    }
   };
 
   const handleStatusChange = async (status: string) => {
     setActionStatus(null);
+
+    if (status === "assigned") {
+      await openAssignment();
+      return;
+    }
+
     setSavingStatus(status);
 
     try {
@@ -201,6 +281,12 @@ export default function CaseDetailPage() {
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[caseData.status] || ""}`}>
               {STATUS_LABELS[caseData.status] || caseData.status}
             </span>
+            {caseData.assignedTo && (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                <User className="w-3 h-3" />
+                {caseData.assignedTo.name}
+              </span>
+            )}
             {caseData.escalationLevel && caseData.escalationLevel !== "none" && (
               <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
                 <AlertTriangle className="w-3 h-3" />
@@ -246,6 +332,66 @@ export default function CaseDetailPage() {
             : "border-red-200 bg-red-50 text-red-700"
         }`}>
           {actionStatus.message}
+        </div>
+      )}
+
+      {assignmentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Assign Individual</h3>
+                <p className="text-xs text-gray-500">Only eligible users for this province are shown.</p>
+              </div>
+              <button onClick={() => setAssignmentOpen(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <label className="block">
+                <span className="text-xs font-medium text-gray-600">Responsible person</span>
+                <select
+                  value={selectedAssigneeId}
+                  onChange={(event) => setSelectedAssigneeId(event.target.value)}
+                  disabled={assignmentLoading}
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
+                >
+                  <option value="">{assignmentLoading ? "Loading users..." : "Select a person"}</option>
+                  {assignableUsers.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name} - {person.role.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-gray-600">Assignment note</span>
+                <textarea
+                  value={assignmentNote}
+                  onChange={(event) => setAssignmentNote(event.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Optional instruction for the assigned person"
+                />
+              </label>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
+              <button
+                onClick={() => setAssignmentOpen(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitAssignment}
+                disabled={savingStatus === "assigned" || assignmentLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                <Save className="w-4 h-4" />
+                {savingStatus === "assigned" ? "Assigning..." : "Assign Case"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -391,6 +537,15 @@ export default function CaseDetailPage() {
                 <dt className="text-gray-500">Assigned To</dt>
                 <dd className="text-gray-900">{caseData.assignedTo?.name || "Unassigned"}</dd>
               </div>
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={openAssignment}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Assign Individual
+                </button>
+              </div>
               <div className="flex justify-between text-sm">
                 <dt className="text-gray-500">Accountable</dt>
                 <dd className="text-gray-900">{caseData.accountableOfficial || "-"}</dd>
@@ -492,6 +647,7 @@ export default function CaseDetailPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{m.title}</p>
                     {m.description && <p className="text-xs text-gray-500">{m.description}</p>}
+                    {m.assignedTo && <p className="text-xs text-gray-400 mt-0.5">Assigned to {m.assignedTo}</p>}
                   </div>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                     MILESTONE_COLORS[m.status] || "bg-gray-100 text-gray-600"

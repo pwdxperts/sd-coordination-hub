@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -136,6 +137,11 @@ function responseFor(content: string, filename: string, format: ReportFormat) {
 }
 
 export async function GET(request: NextRequest) {
+  const access = await getAccessContext(request);
+  if (!access) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const params = request.nextUrl.searchParams;
   const type = (params.get("type") || "custom") as ReportType;
   const format = (params.get("format") || "word") as ReportFormat;
@@ -162,7 +168,14 @@ export async function GET(request: NextRequest) {
   };
 
   if (type === "critical") where.severityLevel = "Critical";
-  if (provinceId) where.provinceId = provinceId;
+  if (access.isProvinceScoped) {
+    if (!access.provinceId) {
+      return NextResponse.json({ error: "Your user is not linked to a province" }, { status: 403 });
+    }
+    where.provinceId = access.provinceId;
+  } else if (provinceId) {
+    where.provinceId = provinceId;
+  }
   if (sectorId) where.sectorId = sectorId;
   if (severity) where.severityLevel = severity;
   if (status) where.status = status;
@@ -225,7 +238,9 @@ export async function GET(request: NextRequest) {
   const title = REPORT_TITLES[type];
   const filters = [
     `Period: ${formatDate(from)} to ${formatDate(to)}`,
-    provinceId ? "Province: filtered" : "Province: All",
+    access.isProvinceScoped
+      ? `Province: ${access.provinceName || "Your province"}`
+      : provinceId ? "Province: filtered" : "Province: All",
     sectorId ? "Sector: filtered" : "Sector: All",
     severity ? `Severity: ${severity}` : "Severity: All",
     status ? `Status: ${STATUS_LABELS[status] || status}` : "Status: All",

@@ -23,6 +23,15 @@ const navItems = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
+const provincialNavHrefs = new Set([
+  "/dashboard",
+  "/dashboard/cases",
+  "/dashboard/escalations",
+  "/dashboard/interventions",
+  "/dashboard/geography",
+  "/dashboard/reports",
+]);
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -48,7 +57,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {});
   }, []);
 
-  const currentPage = navItems.find((item) =>
+  const visibleNavItems = currentUser?.role === "provincial_coordinator"
+    ? navItems.filter((item) => provincialNavHrefs.has(item.href))
+    : navItems;
+
+  const currentPage = visibleNavItems.find((item) =>
+    item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
+  ) || navItems.find((item) =>
     item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
   );
 
@@ -68,7 +83,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo only — no text */}
         <div className={`flex items-center h-16 border-b border-gray-100 px-4 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
           <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-2"}`}>
-            <img src="/logo.jpg" alt="CoGTA" className="h-9 w-auto object-contain rounded" />
+            <span className={`block ${sidebarCollapsed ? "h-10 w-10 overflow-hidden" : "h-12 w-[165px]"}`}>
+              <img
+                src="/logo.jpg"
+                alt="CoGTA"
+                className={`${sidebarCollapsed ? "h-10 w-auto max-w-none object-left" : "h-12 w-auto"} object-contain mix-blend-multiply`}
+              />
+            </span>
           </div>
           {!sidebarCollapsed && (
             <button onClick={() => setSidebarCollapsed(true)} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 ml-1">
@@ -79,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav — just items, no user card */}
         <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
             const Icon = item.icon;
             return (
@@ -167,14 +188,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.jpg" alt="CoGTA" className="h-9 w-auto object-contain rounded" />
+            <img src="/logo.jpg" alt="CoGTA" className="h-12 w-auto max-w-[170px] object-contain mix-blend-multiply" />
           </div>
           <button onClick={() => setMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>
         <nav className="overflow-y-auto py-3 px-2.5 space-y-0.5">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
             const Icon = item.icon;
             return (

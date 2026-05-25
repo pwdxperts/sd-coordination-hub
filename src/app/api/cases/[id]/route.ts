@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { caseIsInScope, getAccessContext, validateAssigneeForCase } from "@/lib/access";
 
 // GET /api/cases/[id] - Full case detail
 export async function GET(
@@ -7,6 +8,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     const caseDetail = await prisma.case.findUnique({
@@ -18,7 +24,7 @@ export async function GET(
         sector: true,
         failureCategory: true,
         leadDepartment: true,
-        assignedTo: { select: { id: true, name: true, email: true, role: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true, province: true } },
         owner: { select: { id: true, name: true, email: true, role: true } },
         evidence: { orderBy: { createdAt: "desc" } },
         comments: { orderBy: { createdAt: "desc" } },
@@ -31,7 +37,7 @@ export async function GET(
       },
     });
 
-    if (!caseDetail) {
+    if (!caseDetail || !caseIsInScope(access, caseDetail.provinceId)) {
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
@@ -51,15 +57,19 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
 
     const existing = await prisma.case.findUnique({ where: { id } });
-    if (!existing) {
+    if (!existing || !caseIsInScope(access, existing.provinceId)) {
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
-    // Status transition validation
     const validTransitions: Record<string, string[]> = {
       new_submission: ["under_verification", "rejected"],
       under_verification: ["classified", "duplicate", "rejected"],
@@ -85,7 +95,13 @@ export async function PATCH(
       }
     }
 
-    // Build update data
+    if (body.status === "assigned" && !body.assignedToId && !existing.assignedToId) {
+      return NextResponse.json(
+        { error: "Choose an individual assignee before moving this case to Assigned" },
+        { status: 400 }
+      );
+    }
+
     const updateData: any = {};
     const allowedFields = [
       "title", "description", "status", "severityScore", "severityLevel",
@@ -96,13 +112,29 @@ export async function PATCH(
       "responsibleSphere", "departmentId", "implementingAgent",
       "accountableOfficial", "contactDetails", "assignedToId", "ownerId",
       "actionPlan", "actionPlanDueDate", "interventionPlan",
-      "milestonesJson", "progressPercent", "blockers",
-      "resolutionNotes",
+      "progressPercent", "blockers", "resolutionNotes",
     ];
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field];
+      }
+    }
+
+    const targetProvinceId = updateData.provinceId !== undefined ? updateData.provinceId : existing.provinceId;
+    if (access.isProvinceScoped && targetProvinceId !== access.provinceId) {
+      return NextResponse.json({ error: "You can only work on cases in your province" }, { status: 403 });
+    }
+
+    if (updateData.assignedToId !== undefined) {
+      const assigneeCheck = await validateAssigneeForCase(access, updateData.assignedToId, targetProvinceId);
+      if (!assigneeCheck.ok) {
+        return NextResponse.json({ error: assigneeCheck.error }, { status: 400 });
+      }
+
+      if (existing.assignedToId !== updateData.assignedToId) {
+        updateData.reassignedFromId = existing.assignedToId || null;
+        updateData.reassignedAt = new Date();
       }
     }
 
@@ -113,15 +145,19 @@ export async function PATCH(
     const updated = await prisma.case.update({
       where: { id },
       data: updateData,
+      include: {
+        province: true,
+        sector: true,
+        assignedTo: { select: { id: true, name: true, email: true, role: true, province: true } },
+      },
     });
 
-    // Create audit log
     const changes: string[] = [];
     for (const field of Object.keys(updateData)) {
       const oldVal = (existing as any)[field];
       const newVal = updateData[field];
       if (String(oldVal) !== String(newVal)) {
-        changes.push(`${field}: ${oldVal} → ${newVal}`);
+        changes.push(`${field}: ${oldVal} -> ${newVal}`);
       }
     }
 
@@ -129,7 +165,7 @@ export async function PATCH(
       await prisma.auditLog.create({
         data: {
           caseId: id,
-          userId: body.updatedBy || null,
+          userId: access.user.id,
           action: "CASE_UPDATED",
           comment: changes.join("; "),
         },

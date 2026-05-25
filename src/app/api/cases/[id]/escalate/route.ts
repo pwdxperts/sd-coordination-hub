@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { caseIsInScope, getAccessContext } from "@/lib/access";
 
 // POST /api/cases/[id]/escalate
 export async function POST(
@@ -7,11 +8,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
 
     const caseRecord = await prisma.case.findUnique({ where: { id } });
-    if (!caseRecord) {
+    if (!caseRecord || !caseIsInScope(access, caseRecord.provinceId)) {
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
@@ -60,7 +66,7 @@ export async function POST(
     await prisma.auditLog.create({
       data: {
         caseId: id,
-        userId: body.escalatedBy || null,
+        userId: access.user.id,
         action: "ESCALATED",
         comment: `Escalated to ${nextLevel} (${escalationTargets[nextLevel]}). Reason: ${body.reason || "SLA breach"}`,
       },

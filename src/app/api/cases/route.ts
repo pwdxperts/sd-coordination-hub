@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateReference } from "@/lib/auth";
+import { getAccessContext, scopedCaseWhere, validateAssigneeForCase } from "@/lib/access";
 
 // GET /api/cases - List cases with filters
 export async function GET(request: NextRequest) {
   try {
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const provinceId = searchParams.get("provinceId");
     const sectorId = searchParams.get("sectorId");
@@ -19,7 +25,10 @@ export async function GET(request: NextRequest) {
     if (provinceId) where.provinceId = provinceId;
     if (sectorId) where.sectorId = sectorId;
     if (severityLevel) where.severityLevel = severityLevel;
-    if (status) where.status = status;
+    if (status) {
+      const statuses = status.split(",").map((item) => item.trim()).filter(Boolean);
+      where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
+    }
     if (search) {
       where.OR = [
         { referenceNumber: { contains: search, mode: "insensitive" } },
@@ -30,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const [cases, total] = await Promise.all([
       prisma.case.findMany({
-        where,
+        where: scopedCaseWhere(access, where),
         include: {
           province: true,
           district: true,
@@ -43,7 +52,7 @@ export async function GET(request: NextRequest) {
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.case.count({ where }),
+      prisma.case.count({ where: scopedCaseWhere(access, where) }),
     ]);
 
     return NextResponse.json({
@@ -67,9 +76,32 @@ export async function GET(request: NextRequest) {
 // POST /api/cases - Create new case
 export async function POST(request: NextRequest) {
   try {
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const referenceNumber = generateReference();
+    let targetProvinceId = body.provinceId || null;
+
+    if (access.isProvinceScoped) {
+      if (!access.provinceId) {
+        return NextResponse.json({ error: "Your user is not linked to a province" }, { status: 403 });
+      }
+
+      if (targetProvinceId && targetProvinceId !== access.provinceId) {
+        return NextResponse.json({ error: "You can only create cases in your province" }, { status: 403 });
+      }
+
+      targetProvinceId = access.provinceId;
+    }
+
+    const assigneeCheck = await validateAssigneeForCase(access, body.assignedToId, targetProvinceId);
+    if (!assigneeCheck.ok) {
+      return NextResponse.json({ error: assigneeCheck.error }, { status: 400 });
+    }
 
     const newCase = await prisma.case.create({
       data: {
@@ -80,7 +112,7 @@ export async function POST(request: NextRequest) {
         reporterName: body.reporterName || null,
         reporterContact: body.reporterContact || null,
         reporterType: body.reporterType || null,
-        provinceId: body.provinceId || null,
+        provinceId: targetProvinceId,
         districtId: body.districtId || null,
         municipalityId: body.municipalityId || null,
         ward: body.ward || null,
@@ -93,6 +125,8 @@ export async function POST(request: NextRequest) {
         publicSafetyRisk: body.publicSafetyRisk || false,
         isRecurring: body.isRecurring || false,
         status: "new_submission",
+        assignedToId: body.assignedToId || null,
+        ownerId: access.user.id,
       },
     });
 
@@ -102,7 +136,7 @@ export async function POST(request: NextRequest) {
         caseId: newCase.id,
         action: "CASE_CREATED",
         comment: `Case ${referenceNumber} created`,
-        userId: body.createdBy || null,
+        userId: access.user.id,
       },
     });
 

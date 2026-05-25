@@ -1,45 +1,51 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAccessContext, scopedCaseWhere } from "@/lib/access";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Total cases
-    const totalCases = await prisma.case.count();
+    const access = await getAccessContext(request);
+    if (!access) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
 
-    // Cases by severity
-    const criticalCases = await prisma.case.count({ where: { severityLevel: "Critical" } });
-    const highCases = await prisma.case.count({ where: { severityLevel: "High" } });
-    const moderateCases = await prisma.case.count({ where: { severityLevel: "Moderate" } });
-    const stableCases = await prisma.case.count({ where: { severityLevel: "Stable" } });
+    const caseWhere = scopedCaseWhere(access);
+    const totalCases = await prisma.case.count({ where: caseWhere });
 
-    // Resolved cases
+    const criticalCases = await prisma.case.count({ where: { ...caseWhere, severityLevel: "Critical" } });
+    const highCases = await prisma.case.count({ where: { ...caseWhere, severityLevel: "High" } });
+    const moderateCases = await prisma.case.count({ where: { ...caseWhere, severityLevel: "Moderate" } });
+    const stableCases = await prisma.case.count({ where: { ...caseWhere, severityLevel: "Stable" } });
+
     const resolvedCases = await prisma.case.count({
-      where: { status: { in: ["resolved", "closed"] } },
+      where: { ...caseWhere, status: { in: ["resolved", "closed"] } },
     });
 
-    // Overdue cases
     const overdueCases = await prisma.case.count({
       where: {
+        ...caseWhere,
         slaDeadline: { lt: new Date() },
         status: { notIn: ["resolved", "closed"] },
       },
     });
 
-    // Escalations due today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const escalationsDueToday = await prisma.escalation.count({
-      where: {
-        status: "active",
-        escalatedAt: { gte: today, lt: tomorrow },
-      },
-    });
+    const escalationWhere: any = {
+      status: "active",
+      escalatedAt: { gte: today, lt: tomorrow },
+    };
+    if (access.isProvinceScoped) {
+      escalationWhere.case = { provinceId: access.provinceId || "__no_province_scope__" };
+    }
 
-    // Cases by province
+    const escalationsDueToday = await prisma.escalation.count({ where: escalationWhere });
+
     const provinces = await prisma.province.findMany({
+      where: access.isProvinceScoped ? { id: access.provinceId || "__no_province_scope__" } : undefined,
       include: {
         districts: {
           include: { municipalities: true },
@@ -49,7 +55,7 @@ export async function GET() {
 
     const casesByProvince = [];
     for (const province of provinces) {
-      const count = await prisma.case.count({ where: { provinceId: province.id } });
+      const count = await prisma.case.count({ where: { ...caseWhere, provinceId: province.id } });
       casesByProvince.push({
         id: province.id,
         name: province.name,
@@ -57,15 +63,14 @@ export async function GET() {
       });
     }
 
-    // Cases by sector
     const sectors = await prisma.sector.findMany();
     const casesBySector = [];
     for (const sector of sectors) {
       const countBySeverity = await Promise.all([
-        prisma.case.count({ where: { sectorId: sector.id, severityLevel: "Critical" } }),
-        prisma.case.count({ where: { sectorId: sector.id, severityLevel: "High" } }),
-        prisma.case.count({ where: { sectorId: sector.id, severityLevel: "Moderate" } }),
-        prisma.case.count({ where: { sectorId: sector.id, severityLevel: "Stable" } }),
+        prisma.case.count({ where: { ...caseWhere, sectorId: sector.id, severityLevel: "Critical" } }),
+        prisma.case.count({ where: { ...caseWhere, sectorId: sector.id, severityLevel: "High" } }),
+        prisma.case.count({ where: { ...caseWhere, sectorId: sector.id, severityLevel: "Moderate" } }),
+        prisma.case.count({ where: { ...caseWhere, sectorId: sector.id, severityLevel: "Stable" } }),
       ]);
       casesBySector.push({
         id: sector.id,
@@ -78,7 +83,6 @@ export async function GET() {
       });
     }
 
-    // Cases by status
     const statuses = [
       "new_submission", "under_verification", "duplicate", "classified",
       "assigned", "action_plan", "intervention", "monitoring",
@@ -86,13 +90,12 @@ export async function GET() {
     ];
     const casesByStatus = [];
     for (const status of statuses) {
-      const count = await prisma.case.count({ where: { status } });
+      const count = await prisma.case.count({ where: { ...caseWhere, status } });
       casesByStatus.push({ status, count });
     }
 
-    // Recent critical cases
     const recentCritical = await prisma.case.findMany({
-      where: { severityLevel: { in: ["Critical", "High"] } },
+      where: { ...caseWhere, severityLevel: { in: ["Critical", "High"] } },
       include: {
         province: { select: { name: true } },
         sector: { select: { name: true } },
@@ -103,6 +106,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
+      scope: access.isProvinceScoped ? { provinceId: access.provinceId, provinceName: access.provinceName } : null,
       totalCases,
       bySeverity: { critical: criticalCases, high: highCases, moderate: moderateCases, stable: stableCases },
       resolvedCases,
