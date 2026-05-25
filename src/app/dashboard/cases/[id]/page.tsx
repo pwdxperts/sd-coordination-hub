@@ -259,7 +259,6 @@ export default function CaseDetailPage() {
   }
 
   const severityScore = caseData.severityScore || 0;
-  const gaugeRotation = (severityScore / 100) * 180;
   const nextActions = STATUS_TRANSITIONS[caseData.status] || [];
 
   return (
@@ -395,6 +394,50 @@ export default function CaseDetailPage() {
         </div>
       )}
 
+      {/* Workflow Tracker */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-x-auto">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4">Case Workflow</h3>
+        <div className="flex items-start min-w-[640px]">
+          {["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","resolved"].map((step, i, arr) => {
+            const stepOrder = ["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","resolved"];
+            const currentIdx = stepOrder.indexOf(caseData.status);
+            const stepIdx = i;
+            const isCompleted = currentIdx > stepIdx;
+            const isCurrent = currentIdx === stepIdx;
+            const isPending = currentIdx < stepIdx;
+            const isLast = i === arr.length - 1;
+            const shortLabels: Record<string,string> = { new_submission: "Received", under_verification: "Verified", classified: "Classified", assigned: "Assigned", action_plan: "Action Plan", intervention: "Intervention", monitoring: "Monitoring", resolved: "Resolved" };
+            return (
+              <div key={step} className="flex items-start flex-1">
+                <div className="flex flex-col items-center">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    isCompleted ? "bg-green-500 text-white" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-gray-200 text-gray-400"
+                  }`}>
+                    {isCompleted ? <CheckCircle className="w-4 h-4" /> : stepIdx + 1}
+                  </div>
+                  <p className={`text-[10px] mt-1.5 text-center leading-tight ${isCompleted ? "text-green-600 font-medium" : isCurrent ? "text-blue-700 font-semibold" : "text-gray-400"}`}>
+                    {shortLabels[step]}
+                  </p>
+                </div>
+                {!isLast && (
+                  <div className={`flex-1 h-0.5 mt-3.5 mx-1 ${isCompleted ? "bg-green-400" : isCurrent ? "bg-blue-200" : "bg-gray-200"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+          <span>Current: <strong className="text-gray-900">{STATUS_LABELS[caseData.status] || caseData.status}</strong></span>
+          {caseData.assignedTo && (
+            <span>Assigned to: <strong className="text-blue-700">{caseData.assignedTo.name}</strong></span>
+          )}
+          {!caseData.assignedTo && (
+            <button onClick={() => setAssignmentOpen(true)} className="text-blue-600 hover:underline font-medium">Assign now →</button>
+          )}
+          <span>Opened: {new Date(caseData.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
         {TABS.map((tab) => {
@@ -416,35 +459,31 @@ export default function CaseDetailPage() {
         })}
       </div>
 
-      {/* Severity Score Gauge */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <div className="flex items-center gap-6">
-          <div className="text-center">
-            <p className="text-xs text-gray-500 mb-2">Severity Score</p>
-            <div className="relative w-24 h-14 overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 h-full bg-gradient-to-t from-red-100 via-amber-100 to-green-100 rounded-t-full" />
-              <div
-                className="absolute top-1 left-1/2 w-1 h-7 bg-gray-800 rounded-full origin-bottom transition-transform"
-                style={{ transform: `translateX(-50%) rotate(${gaugeRotation - 90}deg)` }}
-              />
-              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-center">
-                <p className="text-xl font-bold text-gray-900">{severityScore}</p>
-                <p className="text-[10px] text-gray-500">/ 100</p>
+      {/* Severity Card */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${SEVERITY_COLORS[caseData.severityLevel] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
+              {caseData.severityLevel}
+            </span>
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${caseData.severityLevel === "Critical" ? "bg-red-500" : caseData.severityLevel === "High" ? "bg-orange-500" : caseData.severityLevel === "Moderate" ? "bg-amber-500" : "bg-green-500"}`} style={{ width: `${severityScore}%` }} />
               </div>
+              <span className="text-sm font-semibold text-gray-900">{severityScore}/100</span>
             </div>
           </div>
-
           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <p className="text-xs text-gray-500">Population Affected</p>
+              <p className="text-xs text-gray-500">Population</p>
               <p className="font-semibold text-gray-900">{caseData.populationAffected?.toLocaleString() || 0}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Duration (Days)</p>
-              <p className="font-semibold text-gray-900">{caseData.durationDays || 0}</p>
+              <p className="text-xs text-gray-500">Duration</p>
+              <p className="font-semibold text-gray-900">{caseData.durationDays || 0} days</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Public Safety Risk</p>
+              <p className="text-xs text-gray-500">Safety Risk</p>
               <p className={`font-semibold ${caseData.publicSafetyRisk ? "text-red-600" : "text-green-600"}`}>
                 {caseData.publicSafetyRisk ? "Yes" : "No"}
               </p>
