@@ -9,6 +9,7 @@ import {
 import {
   AlertCircle, TrendingUp, CheckCircle2, Clock, ArrowUpRight,
   Activity, Users, MapPin, Building2, ExternalLink, AlertTriangle,
+  CalendarDays, Mail, PhoneCall, PlusCircle, ClipboardList, MessageSquare,
 } from "lucide-react";
 
 const SEVERITY_COLORS = {
@@ -27,11 +28,59 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Resolved", closed: "Closed", reopened: "Reopened",
 };
 
+const CONTACT_PHONE = "0797224188";
+const CONTACT_EMAIL = "pride@pwdxperts.co.za";
+
+const ROLE_LABELS: Record<string, string> = {
+  system_admin: "System Admin",
+  hub_intake: "Hub Intake",
+  hub_analyst: "Hub Analyst",
+  provincial_coordinator: "Provincial Coordinator",
+  municipal_user: "Municipal User",
+  sector_user: "Sector User",
+  rapid_response: "Rapid Response",
+  executive_viewer: "Executive Viewer",
+  minister: "Minister",
+  director_general: "Director General",
+  national_director: "National Director",
+  admin: "Admin",
+  intake_officer: "Intake Officer",
+};
+
+type CurrentUser = {
+  name: string;
+  role: string;
+};
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [todayLabel, setTodayLabel] = useState("");
+  const [greeting, setGreeting] = useState("Good day");
 
   useEffect(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    setGreeting(
+      hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+    );
+    setTodayLabel(
+      new Intl.DateTimeFormat("en-ZA", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(now)
+    );
+
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+
     fetch("/api/dashboard")
       .then((r) => r.json())
       .then((data) => {
@@ -68,12 +117,86 @@ export default function DashboardPage() {
     { label: "Escalations Today", value: stats.escalationsDueToday, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" },
   ];
 
+  const displayName = currentUser?.name || "there";
+  const displayRole = currentUser?.role
+    ? ROLE_LABELS[currentUser.role] || currentUser.role.replace(/_/g, " ")
+    : "Coordination Hub";
+
+  const quickActions = [
+    { label: "New Case", href: "/dashboard/cases/new", icon: PlusCircle, tone: "blue" },
+    { label: "Intake Queue", href: "/dashboard/intake", icon: ClipboardList, tone: "slate" },
+    { label: "Call Pride", href: `tel:${CONTACT_PHONE}`, icon: PhoneCall, tone: "green" },
+    { label: "Email Pride", href: `mailto:${CONTACT_EMAIL}`, icon: Mail, tone: "amber" },
+    { label: "Reports", href: "/dashboard/reports", icon: MessageSquare, tone: "purple" },
+  ];
+
+  const actionStyles: Record<string, string> = {
+    blue: "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+    slate: "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    amber: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    purple: "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+  };
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">National War Room</h1>
-        <p className="text-sm text-gray-500 mt-1">Real-time service delivery coordination dashboard</p>
+      {/* Command Header */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 lg:p-5">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="w-4 h-4 text-blue-600" />
+                {todayLabel}
+              </span>
+              <span className="hidden sm:inline text-gray-300">|</span>
+              <span className="capitalize">{displayRole}</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {greeting}, {displayName}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              National War Room status, priority cases, and rapid coordination actions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 xl:justify-end">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${actionStyles[action.tone]}`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{action.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Duty Phone</p>
+            <a href={`tel:${CONTACT_PHONE}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700">
+              {CONTACT_PHONE}
+            </a>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Duty Email</p>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700 break-all">
+              {CONTACT_EMAIL}
+            </a>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Open Priorities</p>
+            <p className="text-sm font-semibold text-gray-900">
+              {stats.bySeverity.critical + stats.bySeverity.high} critical/high cases
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
