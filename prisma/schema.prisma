@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── USER & AUTH ────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("public_reporter")
+  phone         String?
+  department    String?
+  province      String?
+  municipality  String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignedCases Case[]      @relation("CaseAssignee")
+  ownedCases    Case[]      @relation("CaseOwner")
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
+// ─── GEOGRAPHY LOOKUP TABLES ────────────────────────────
+
+model Province {
+  id       String     @id @default(uuid())
+  name     String     @unique
+  districts District[]
+  cases    Case[]
+
+  @@map("provinces")
+}
+
+model District {
+  id             String          @id @default(uuid())
+  name           String
+  provinceId     String
+  province       Province        @relation(fields: [provinceId], references: [id])
+  municipalities Municipality[]
+  cases          Case[]
+
+  @@unique([name, provinceId])
+  @@map("districts")
+}
+
+model Municipality {
+  id         String   @id @default(uuid())
+  name       String
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+  wardCount  Int      @default(0)
+  cases      Case[]
+
+  @@unique([name, districtId])
+  @@map("municipalities")
+}
+
+model Sector {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  description      String?
+  active           Boolean           @default(true)
+  cases            Case[]
+  failureCategories FailureCategory[]
+
+  @@map("sectors")
+}
+
+model FailureCategory {
+  id          String  @id @default(uuid())
+  name        String
+  sectorId    String
+  sector      Sector  @relation(fields: [sectorId], references: [id])
+  description String?
+  cases       Case[]
+
+  @@unique([name, sectorId])
+  @@map("failure_categories")
+}
+
+model Department {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  sphere    String  @default("National")
+  sector    String?
+  active    Boolean @default(true)
+  cases     Case[]
+
+  @@map("departments")
+}
+
+// ─── CASE MANAGEMENT ────────────────────────────────────
+
+model Case {
+  id                    String    @id @default(uuid())
+  referenceNumber       String    @unique
+  title                 String
+  description           String?
+
+  // Intake
+  intakeChannel         String    @default("manual")
+  reporterName          String?
+  reporterContact       String?
+  reporterType          String?
+  dateReceived          DateTime  @default(now())
+
+  // Location
+  provinceId            String?
+  province              Province? @relation(fields: [provinceId], references: [id])
+  districtId            String?
+  district              District? @relation(fields: [districtId], references: [id])
+  municipalityId        String?
+  municipality          Municipality? @relation(fields: [municipalityId], references: [id])
+  ward                  String?
+  latitude              Float?
+  longitude             Float?
+
+  // Classification
+  sectorId              String?
+  sector                Sector?   @relation(fields: [sectorId], references: [id])
+  failureCategoryId     String?
+  failureCategory       FailureCategory? @relation(fields: [failureCategoryId], references: [id])
+  subCategory           String?
+  rootCause             String?
+
+  // Severity
+  severityScore         Int       @default(0)
+  severityLevel         String    @default("Moderate")
+  severityOverride      Boolean   @default(false)
+  severityOverrideReason String?
+  populationAffected    Int       @default(0)
+  publicSafetyRisk      Boolean   @default(false)
+  durationDays          Int       @default(0)
+  isRecurring           Boolean   @default(false)
+  protestMediaFlag      Boolean   @default(false)
+
+  // Assignment
+  responsibleSphere     String?
+  departmentId           String?
+  leadDepartment         Department? @relation(fields: [departmentId], references: [id])
+  implementingAgent     String?
+  accountableOfficial   String?
+  contactDetails        String?
+
+  // Status & Tracking
+  status                String    @default("new_submission")
+  slaDeadline           DateTime?
+  escalationLevel       String?   @default("none")
+  lastUpdated           DateTime  @updatedAt
+
+  // Assignment to users
+  assignedToId          String?
+  assignedTo            User?     @relation("CaseAssignee", fields: [assignedToId], references: [id])
+  ownerId               String?
+  owner                 User?     @relation("CaseOwner", fields: [ownerId], references: [id])
+
+  // Action Plan
+  actionPlan            String?
+  actionPlanDueDate     DateTime?
+  actionPlanSubmittedAt DateTime?
+
+  // Intervention
+  interventionPlan      String?
+  progressPercent       Int       @default(0)
+  blockers              String?
+
+  // Resolution
+  resolutionNotes       String?
+  resolutionVerifiedAt  DateTime?
+  verifiedById          String?
+
+  // Close-out
+  closeOutStatus        String?
+  dateResolved          DateTime?
+  lessonsLearned        String?
+
+  // Linked cases
+  linkedCaseId          String?
+  duplicatedFromId      String?
+  isDuplicate           Boolean   @default(false)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  evidence     Evidence[]
+  comments     CaseComment[]
+  auditLogs    AuditLog[]
+  escalations  Escalation[]
+  milestones   Milestone[]
+
+  @@index([status])
+  @@index([severityLevel])
+  @@index([provinceId])
+  @@index([sectorId])
+  @@index([assignedToId])
+  @@index([escalationLevel])
+  @@index([createdAt])
+  @@map("cases")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  caseId      String
+  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  status      String    @default("pending")
+  assignedTo  String?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@map("milestones")
+}
+
+model Evidence {
+  id          String   @id @default(uuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
+  uploadedBy  String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("evidence")
+}
+
+model CaseComment {
+  id        String   @id @default(uuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId    String?
+  userName  String
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@map("case_comments")
+}
+
+model Escalation {
+  id            String   @id @default(uuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  level         String
+  reason        String
+  escalatedTo   String
+  escalatedAt   DateTime @default(now())
+  respondedAt   DateTime?
+  response      String?
+  status        String   @default("active")
+
+  @@map("escalations")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  caseId    String?
+  case      Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String    @default("info")
+  caseId    String?
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@map("notifications")
+}
+
+// ─── SLA & ESCALATION CONFIG ────────────────────────────
+
+model SlaConfig {
+  id              String   @id @default(uuid())
+  severityLevel   String   @unique
+  responseTimeHours Int    @default(24)
+  resolutionDays  Int      @default(7)
+  escalationAfterHours Int @default(72)
+  description     String?
+  createdAt       DateTime @default(now())
+
+  @@map("sla_configs")
+}
+
+model EscalationRule {
+  id          String   @id @default(uuid())
+  name        String
+  condition   String
+  severityMin String
+  escalateTo  String
+  afterHours  Int      @default(24)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("escalation_rules")
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
+}
