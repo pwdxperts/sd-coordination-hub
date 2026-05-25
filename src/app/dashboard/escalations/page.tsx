@@ -2,151 +2,120 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, ArrowUpRight, Filter, AlertCircle } from "lucide-react";
+import { AlertTriangle, Clock, ArrowUpRight } from "lucide-react";
+import DataTable from "@/components/DataTable";
 
-const LEVEL_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  L1: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "Municipal Manager" },
-  L2: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", label: "Provincial COGTA" },
-  L3: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "Sector Department" },
-  L4: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", label: "DG / Steerco" },
-  L5: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "Minister" },
+const LEVEL_MAP: Record<string, { label: string; badge: string }> = {
+  L1: { label: "Municipal Manager", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  L2: { label: "Provincial COGTA", badge: "bg-orange-50 text-orange-700 border-orange-200" },
+  L3: { label: "Sector Department", badge: "bg-red-50 text-red-700 border-red-200" },
+  L4: { label: "DG / Steerco", badge: "bg-rose-50 text-rose-700 border-rose-200" },
+  L5: { label: "Minister", badge: "bg-purple-50 text-purple-700 border-purple-200" },
 };
+
+const severityBadge = (level: string) => {
+  const map: Record<string, string> = {
+    Critical: "bg-red-50 text-red-700 border-red-200",
+    High: "bg-orange-50 text-orange-700 border-orange-200",
+    Moderate: "bg-amber-50 text-amber-700 border-amber-200",
+    Stable: "bg-green-50 text-green-700 border-green-200",
+  };
+  return `inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${map[level] || ""}`;
+};
+
+const daysOpen = (d: string) => Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
 
 export default function EscalationsPage() {
   const [cases, setCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterLevel, setFilterLevel] = useState("");
 
   useEffect(() => {
-    const params = new URLSearchParams({ pageSize: "100" });
-    fetch(`/api/cases?${params}`)
+    fetch("/api/cases?pageSize=200")
       .then((r) => r.json())
-      .then((data) => {
-        setCases((data.cases || []).filter((c: any) => c.escalationLevel && c.escalationLevel !== "none"));
+      .then((d) => {
+        setCases((d.cases || []).filter((c: any) => c.escalationLevel && c.escalationLevel !== "none"));
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  const filtered = filterLevel ? cases.filter((c) => c.escalationLevel === filterLevel) : cases;
-
-  const getDaysSinceOpened = (date: string) => {
-    return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  const getStatusIndicator = (caseItem: any) => {
-    const daysOpen = getDaysSinceOpened(caseItem.createdAt);
-    if (caseItem.escalationLevel === "L4" || caseItem.escalationLevel === "L5") return "text-red-500";
-    if (daysOpen > 30) return "text-red-500";
-    if (daysOpen > 14) return "text-amber-500";
-    return "text-green-500";
-  };
+  const columns = [
+    {
+      key: "referenceNumber", label: "Reference",
+      render: (r: any) => (
+        <Link href={`/dashboard/cases/${r.id}`} className="text-blue-600 hover:text-blue-700 font-mono text-xs font-medium">
+          {r.referenceNumber}
+        </Link>
+      ),
+    },
+    {
+      key: "title", label: "Title",
+      render: (r: any) => <span className="font-medium text-gray-900 max-w-[250px] truncate block">{r.title}</span>,
+    },
+    {
+      key: "province", label: "Province",
+      render: (r: any) => <span className="text-gray-500">{r.province?.name || "—"}</span>,
+    },
+    {
+      key: "severityLevel", label: "Severity",
+      render: (r: any) => <span className={severityBadge(r.severityLevel)}>{r.severityLevel}</span>,
+    },
+    {
+      key: "escalationLevel", label: "Level",
+      render: (r: any) => {
+        const es = LEVEL_MAP[r.escalationLevel] || { label: r.escalationLevel, badge: "bg-gray-50 text-gray-600 border-gray-200" };
+        return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${es.badge}`}>{r.escalationLevel}</span>;
+      },
+    },
+    {
+      key: "createdAt", label: "Days Open",
+      render: (r: any) => <span className="flex items-center gap-1 text-gray-500"><Clock className="w-3 h-3" />{daysOpen(r.createdAt)}d</span>,
+    },
+    {
+      key: "escalationLevel2", label: "Responsible",
+      render: (r: any) => <span className="text-gray-500 text-xs">{LEVEL_MAP[r.escalationLevel]?.label || "—"}</span>,
+    },
+    {
+      key: "id", label: "", sortable: false,
+      render: (r: any) => (
+        <Link href={`/dashboard/cases/${r.id}`} className="text-blue-400 hover:text-blue-600">
+          <ArrowUpRight className="w-4 h-4" />
+        </Link>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Escalation Board</h1>
-        <p className="text-sm text-gray-500 mt-1">Track escalated cases and their response levels</p>
+        <h1 className="text-xl font-bold text-gray-900">Escalation Board</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Track escalated cases and their response levels</p>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {["L1", "L2", "L3", "L4", "L5"].map((level) => {
           const count = cases.filter((c) => c.escalationLevel === level).length;
-          const colors = LEVEL_COLORS[level] || {};
           return (
-            <button
-              key={level}
-              onClick={() => setFilterLevel(filterLevel === level ? "" : level)}
-              className={`rounded-xl border p-4 text-center transition-all ${
-                filterLevel === level
-                  ? `${colors.border} ${colors.bg} ring-2 ring-blue-500`
-                  : "border-gray-200 bg-white hover:bg-gray-50"
-              }`}
-            >
-              <p className={`text-lg font-bold ${colors.text || "text-gray-900"}`}>{count}</p>
+            <div key={level} className="bg-white rounded-xl border border-gray-200 p-4 text-center shadow-sm">
+              <p className="text-lg font-bold text-gray-900">{count}</p>
               <p className="text-xs font-medium text-gray-500 mt-1">{level}</p>
-              <p className="text-[10px] text-gray-400">{colors.label}</p>
-            </button>
+              <p className="text-[10px] text-gray-400">{LEVEL_MAP[level]?.label || ""}</p>
+            </div>
           );
         })}
       </div>
 
-      {/* Escalated Cases */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200">
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Reference</th>
-                <th className="py-3 px-4">Title</th>
-                <th className="py-3 px-4">Province</th>
-                <th className="py-3 px-4">Severity</th>
-                <th className="py-3 px-4">Level</th>
-                <th className="py-3 px-4">Days Open</th>
-                <th className="py-3 px-4">Responsible</th>
-                <th className="py-3 px-4">Next Target</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((caseItem: any) => {
-                const colors = LEVEL_COLORS[caseItem.escalationLevel] || {};
-                const nextLevel: string = {
-                  none: "L1", L1: "L2", L2: "L3", L3: "L4", L4: "L5",
-                }[caseItem.escalationLevel as string] || "Max";
-
-                return (
-                  <tr key={caseItem.id} className="border-b border-gray-50 hover:bg-blue-50/30">
-                    <td className="py-3 px-4">
-                      <div className={`w-3 h-3 rounded-full ${getStatusIndicator(caseItem)}`} />
-                    </td>
-                    <td className="py-3 px-4">
-                      <Link href={`/dashboard/cases/${caseItem.id}`} className="text-blue-600 hover:text-blue-700 font-mono text-xs">
-                        {caseItem.referenceNumber}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-4 max-w-[200px] truncate font-medium text-gray-900">{caseItem.title}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{caseItem.province?.name || "-"}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        caseItem.severityLevel === "Critical" ? "bg-red-50 text-red-700" :
-                        caseItem.severityLevel === "High" ? "bg-orange-50 text-orange-700" :
-                        "bg-amber-50 text-amber-700"
-                      }`}>
-                        {caseItem.severityLevel}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
-                        {caseItem.escalationLevel}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{getDaysSinceOpened(caseItem.createdAt)}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{colors.label}</td>
-                    <td className="py-3 px-4 text-xs text-gray-500">{nextLevel}</td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center">
-                    <AlertTriangle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No escalated cases</p>
-                  </td>
-                </tr>
-              )}
-              {loading && (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center">
-                    <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto" />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {loading ? (
+        <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+      ) : (
+        <DataTable
+          data={cases}
+          columns={columns}
+          searchPlaceholder="Search escalated cases..."
+          searchKeys={["referenceNumber", "title", "province"]}
+        />
+      )}
     </div>
   );
 }
