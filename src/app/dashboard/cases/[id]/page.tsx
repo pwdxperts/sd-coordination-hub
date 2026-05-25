@@ -47,6 +47,34 @@ const STATUS_LABELS: Record<string, string> = {
   escalated: "Escalated", resolved: "Resolved", closed: "Closed", reopened: "Reopened",
 };
 
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  new_submission: ["under_verification"],
+  under_verification: ["classified", "duplicate"],
+  classified: ["assigned"],
+  assigned: ["action_plan", "escalated"],
+  action_plan: ["intervention", "escalated"],
+  intervention: ["monitoring", "escalated"],
+  monitoring: ["resolved", "escalated"],
+  escalated: ["intervention", "resolved"],
+  resolved: ["closed", "reopened"],
+  closed: ["reopened"],
+  reopened: ["action_plan", "intervention"],
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  under_verification: "Send to Verification",
+  duplicate: "Mark Duplicate",
+  classified: "Classify",
+  assigned: "Assign",
+  action_plan: "Request Action Plan",
+  intervention: "Start Intervention",
+  monitoring: "Begin Monitoring",
+  escalated: "Escalate Case",
+  resolved: "Mark Resolved",
+  closed: "Close Case",
+  reopened: "Reopen",
+};
+
 const MILESTONE_COLORS: Record<string, string> = {
   pending: "bg-gray-100 text-gray-600",
   in_progress: "bg-blue-100 text-blue-600",
@@ -60,8 +88,11 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [actionStatus, setActionStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [savingStatus, setSavingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchCase = () => {
+    setLoading(true);
     fetch(`/api/cases/${params.id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -69,7 +100,65 @@ export default function CaseDetailPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCase();
   }, [params.id]);
+
+  const refreshCase = async () => {
+    const response = await fetch(`/api/cases/${params.id}`);
+    if (!response.ok) throw new Error("Could not refresh case details");
+    setCaseData(await response.json());
+  };
+
+  const handleStatusChange = async (status: string) => {
+    setActionStatus(null);
+    setSavingStatus(status);
+
+    try {
+      if (status === "escalated") {
+        const response = await fetch(`/api/cases/${params.id}/escalate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reason: "Manual escalation from case detail workflow",
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to escalate case");
+        }
+
+        await refreshCase();
+        setActiveTab("escalations");
+        setActionStatus({ type: "success", message: "Case escalated and escalation history updated." });
+        return;
+      }
+
+      const response = await fetch(`/api/cases/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update case status");
+      }
+
+      await refreshCase();
+      setActionStatus({ type: "success", message: `Case moved to ${STATUS_LABELS[status] || status}.` });
+    } catch (error) {
+      setActionStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Something went wrong.",
+      });
+    } finally {
+      setSavingStatus(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -91,24 +180,15 @@ export default function CaseDetailPage() {
 
   const severityScore = caseData.severityScore || 0;
   const gaugeRotation = (severityScore / 100) * 180;
+  const nextActions = STATUS_TRANSITIONS[caseData.status] || [];
 
   return (
     <div className="space-y-6">
-      {/* Back Button & Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/dashboard/cases"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-900"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Cases
-        </Link>
-        <span className="text-sm text-gray-300">|</span>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Link href="/dashboard/cases" className="hover:text-blue-600">Cases</Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">{caseData.referenceNumber}</span>
-        </div>
+      {/* Breadcrumb & Header */}
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        <Link href="/dashboard/cases" className="hover:text-blue-600">Cases</Link>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">{caseData.referenceNumber}</span>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -132,17 +212,42 @@ export default function CaseDetailPage() {
         </div>
 
         {/* Status Transition Buttons */}
-        <div className="flex gap-2 no-print">
-          {["under_verification", "classified", "assigned", "action_plan", "intervention", "monitoring", "resolved"].map((status) => {
-            if (caseData.status === status) return null;
-            return (
-              <button key={status} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-600">
-                {STATUS_LABELS[status] || status}
-              </button>
-            );
-          })}
+        <div className="flex flex-col items-start sm:items-end gap-2 no-print">
+          <p className="text-xs font-medium text-gray-500">Next workflow actions</p>
+          <div className="flex flex-wrap justify-start sm:justify-end gap-2">
+            {nextActions.length > 0 ? (
+              nextActions.map((status) => (
+                <button
+                  key={status}
+                  onClick={() => handleStatusChange(status)}
+                  disabled={savingStatus !== null}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                    status === "escalated"
+                      ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                      : "border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  {savingStatus === status ? "Updating..." : ACTION_LABELS[status] || STATUS_LABELS[status] || status}
+                </button>
+              ))
+            ) : (
+              <span className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-gray-50 text-gray-500">
+                No further action
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
+      {actionStatus && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${
+          actionStatus.type === "success"
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}>
+          {actionStatus.message}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
