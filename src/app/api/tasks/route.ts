@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { verifyJWT } from "@/lib/auth";
+import { parseSessionCookie } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
@@ -13,14 +13,14 @@ export async function GET(request: Request) {
     const where: any = {};
     if (assignedToId) where.assignedToId = assignedToId;
     if (status && status !== "all") where.status = status;
+
     if (!all && !assignedToId) {
-      // Try to get current user from cookie
       try {
         const cookieStore = await cookies();
         const session = cookieStore.get("session");
         if (session?.value) {
-          const payload = verifyJWT(session.value);
-          if (payload?.id) where.assignedToId = payload.id;
+          const payload = parseSessionCookie(session.value);
+          if (payload?.userId) where.assignedToId = payload.userId;
         }
       } catch {}
     }
