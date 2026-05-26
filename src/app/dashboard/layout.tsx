@@ -7,12 +7,14 @@ import {
   LayoutDashboard, Inbox, Briefcase, AlertTriangle, Activity, Map,
   Building2, FileText, BarChart3, Settings, Shield, ChevronLeft,
   ChevronRight, Bell, Search, LogOut, User, Menu, X, ChevronDown, Home,
+  CheckSquare,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/intake", label: "Intake Queue", icon: Inbox },
   { href: "/dashboard/cases", label: "Case Board", icon: Briefcase },
+  { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/dashboard/escalations", label: "Escalations", icon: AlertTriangle },
   { href: "/dashboard/interventions", label: "Interventions", icon: Activity },
   { href: "/dashboard/geography", label: "Geographic View", icon: Map },
@@ -26,6 +28,7 @@ const navItems = [
 const provincialNavHrefs = new Set([
   "/dashboard",
   "/dashboard/cases",
+  "/dashboard/tasks",
   "/dashboard/escalations",
   "/dashboard/interventions",
   "/dashboard/geography",
@@ -80,7 +83,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sidebarCollapsed ? "w-[68px]" : "w-[240px]"
         }`}
       >
-        {/* Logo only — no text */}
         <div className={`flex items-center h-16 border-b border-gray-100 px-4 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
           <div className={`flex items-center ${sidebarCollapsed ? "" : "gap-2"}`}>
             <span className={`block ${sidebarCollapsed ? "h-10 w-10 overflow-hidden" : "h-12 w-[165px]"}`}>
@@ -98,7 +100,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
 
-        {/* Nav — just items, no user card */}
         <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
           {visibleNavItems.map((item) => {
             const isActive = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
@@ -121,53 +122,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* Verification Checklist */}
         {!sidebarCollapsed && (
           <div className="border-t border-gray-100 p-3 mt-auto">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Setup Checklist</p>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              {[
+                { label: "Database connected", done: true },
+                { label: "Auth configured", done: true },
+                { label: "MFA enabled", done: false, partial: true },
+                { label: "Email intake active", done: false, partial: true },
+                { label: "WhatsApp intake", done: false },
+                { label: "Social media scraper", done: false },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-[11px]">
+                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? "bg-green-100" : item.partial ? "bg-amber-100" : "bg-gray-100"}`}>
+                    {item.done ? (
+                      <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    ) : item.partial ? (
+                      <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    ) : (
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                    )}
+                  </div>
+                  <span className={item.done ? "text-gray-500" : item.partial ? "text-gray-400" : "text-gray-300"}>{item.label}</span>
                 </div>
-                <span className="text-gray-500">Database connected</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <span className="text-gray-500">Auth configured</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                </div>
-                <span className="text-gray-400">MFA enabled</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                </div>
-                <span className="text-gray-400">Email intake active</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                </div>
-                <span className="text-gray-300">WhatsApp intake</span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px]">
-                <div className="w-3.5 h-3.5 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                </div>
-                <span className="text-gray-300">Social media scraper</span>
-              </div>
+              ))}
             </div>
           </div>
         )}
       </aside>
 
-      {/* Collapsed expand button */}
       {sidebarCollapsed && (
         <button
           onClick={() => setSidebarCollapsed(false)}
@@ -187,9 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }`}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="CoGTA" className="h-12 w-auto max-w-[170px] object-contain" />
-          </div>
+          <img src="/logo.png" alt="CoGTA" className="h-12 w-auto max-w-[170px] object-contain" />
           <button onClick={() => setMobileSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -217,7 +199,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ─── MAIN AREA ─── */}
       <div className={`flex-1 flex flex-col min-h-screen ${sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[240px]"}`}>
-        {/* Top bar */}
         <header className="bg-white border-b border-gray-200/80 sticky top-0 z-20 backdrop-blur-sm">
           <div className="flex items-center justify-between h-14 px-4 lg:px-6">
             <div className="flex items-center gap-3">
@@ -248,9 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <User className="w-4 h-4 text-blue-600" />
                   </div>
-                  {currentUser && (
-                    <span className="text-sm text-gray-700 hidden md:block">{currentUser.name}</span>
-                  )}
+                  {currentUser && <span className="text-sm text-gray-700 hidden md:block">{currentUser.name}</span>}
                   <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden md:block" />
                 </button>
                 {userMenuOpen && (
@@ -261,9 +240,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <p className="text-sm font-medium text-gray-900">{currentUser?.name || "User"}</p>
                         <p className="text-xs text-gray-500">{currentUser?.role?.replace(/_/g, " ") || "Hub Analyst"}</p>
                       </div>
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                      <Link href="/dashboard/settings" onClick={() => setUserMenuOpen(false)} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                         <Settings className="w-4 h-4" /> Settings
-                      </button>
+                      </Link>
                       <hr className="my-1 border-gray-100" />
                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <LogOut className="w-4 h-4" /> Sign Out
@@ -276,10 +255,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-6">{children}</main>
 
-        {/* Footer */}
         <footer className="bg-white border-t border-gray-100 px-4 lg:px-6 py-3 text-center text-[11px] text-gray-400 no-print">
           National Service Delivery Coordination Hub &copy; {new Date().getFullYear()} &mdash; Department of Cooperative Governance, Republic of South Africa
         </footer>
