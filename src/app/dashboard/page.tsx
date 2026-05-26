@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
   AlertCircle, TrendingUp, CheckCircle2, Clock, ArrowUpRight,
-  Activity, MapPin, Building2, ExternalLink, AlertTriangle,
-  CalendarDays, PlusCircle, ClipboardList, Download, FileText,
+  Activity, Users, MapPin, Building2, ExternalLink, AlertTriangle,
+  CalendarDays, Mail, PhoneCall, PlusCircle, ClipboardList, MessageSquare,
 } from "lucide-react";
 
 const SEVERITY_COLORS = {
@@ -28,34 +29,55 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Resolved", closed: "Closed", reopened: "Reopened",
 };
 
-function exportCSV(data: any[], filename: string, columns: { key: string; label: string }[]) {
-  const header = columns.map((c) => c.label).join(",");
-  const rows = data.map((row) =>
-    columns.map((c) => {
-      let val = row[c.key];
-      if (val == null) val = "";
-      if (typeof val === "object" && val?.name) val = val.name;
-      if (typeof val === "string" && val.includes(",")) val = `"${val}"`;
-      return val;
-    }).join(",")
+const CONTACT_PHONE = "0797224188";
+const CONTACT_EMAIL = "pride@pwdxperts.co.za";
+
+const ROLE_LABELS: Record<string, string> = {
+  system_admin: "System Admin",
+  hub_intake: "Hub Intake",
+  hub_analyst: "Hub Analyst",
+  provincial_coordinator: "Provincial Coordinator",
+  municipal_user: "Municipal User",
+  sector_user: "Sector User",
+  rapid_response: "Rapid Response",
+  executive_viewer: "Executive Viewer",
+  minister: "Minister",
+  director_general: "Director General",
+  national_director: "National Director",
+  admin: "Admin",
+  intake_officer: "Intake Officer",
+};
+
+type CurrentUser = {
+  name: string;
+  role: string;
+};
+
+function hasDashboardStats(data: any) {
+  return Boolean(
+    data &&
+    data.bySeverity &&
+    Array.isArray(data.casesByProvince) &&
+    Array.isArray(data.casesBySector) &&
+    Array.isArray(data.casesByStatus)
   );
-  const csv = [header, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [todayLabel, setTodayLabel] = useState("");
+  const [greeting, setGreeting] = useState("Good day");
 
   useEffect(() => {
     const now = new Date();
+    const hour = now.getHours();
+    setGreeting(
+      hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+    );
     setTodayLabel(
       new Intl.DateTimeFormat("en-ZA", {
         weekday: "long",
@@ -65,39 +87,34 @@ export default function DashboardPage() {
       }).format(now)
     );
 
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+
     fetch("/api/dashboard")
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (r.status === 401) {
+          router.push("/login");
+          throw new Error("Please sign in again to view the dashboard.");
+        }
+        if (!r.ok) throw new Error(data?.error || "Unable to load dashboard data");
+        if (!hasDashboardStats(data)) throw new Error("Dashboard data is incomplete. Please reload.");
+        return data;
+      })
       .then((data) => {
         setStats(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const handleExportByProvince = useCallback(() => {
-    if (!stats?.casesByProvince) return;
-    exportCSV(
-      stats.casesByProvince,
-      `cases-by-province-${new Date().toISOString().split("T")[0]}.csv`,
-      [{ key: "name", label: "Province" }, { key: "count", label: "Cases" }]
-    );
-  }, [stats]);
-
-  const handleExportBySector = useCallback(() => {
-    if (!stats?.casesBySector) return;
-    exportCSV(
-      stats.casesBySector,
-      `cases-by-sector-${new Date().toISOString().split("T")[0]}.csv`,
-      [
-        { key: "name", label: "Sector" },
-        { key: "total", label: "Total Cases" },
-        { key: "critical", label: "Critical" },
-        { key: "high", label: "High" },
-        { key: "moderate", label: "Moderate" },
-        { key: "stable", label: "Stable" },
-      ]
-    );
-  }, [stats]);
+      .catch((error) => {
+        setStats(null);
+        setErrorMessage(error instanceof Error ? error.message : "Unable to load dashboard data");
+        setLoading(false);
+      });
+  }, [router]);
 
   if (loading) {
     return (
@@ -112,41 +129,77 @@ export default function DashboardPage() {
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
         <h3 className="text-gray-500 font-medium">Unable to load dashboard data</h3>
-        <p className="text-sm text-gray-400 mt-1">Run the seed API to populate data</p>
+        <p className="text-sm text-gray-400 mt-1">{errorMessage || "Please reload the dashboard."}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Reload Dashboard
+        </button>
       </div>
     );
   }
 
-  const quickActions = [
-    { label: "New Case", href: "/dashboard/cases/new", icon: PlusCircle, tone: "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100" },
-    { label: "Intake Queue", href: "/dashboard/intake", icon: ClipboardList, tone: "text-slate-700 bg-slate-50 border-slate-200 hover:bg-slate-100" },
-    { label: "Executive Brief", href: "/dashboard/executive", icon: FileText, tone: "text-violet-700 bg-violet-50 border-violet-200 hover:bg-violet-100" },
-    { label: "Reports", href: "/dashboard/reports", icon: TrendingUp, tone: "text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100" },
+  const statCards = [
+    { label: "Total Active Cases", value: stats.totalCases, icon: Activity, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
+    { label: "Critical", value: stats.bySeverity.critical, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", border: "border-red-100" },
+    { label: "High", value: stats.bySeverity.high, icon: ArrowUpRight, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+    { label: "Overdue", value: stats.overdueCases, icon: Clock, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+    { label: "Resolved", value: stats.resolvedCases, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", border: "border-green-100" },
+    { label: "Escalations Today", value: stats.escalationsDueToday, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100" },
   ];
+
+  const displayName = currentUser?.name || "there";
+  const displayRole = currentUser?.role
+    ? ROLE_LABELS[currentUser.role] || currentUser.role.replace(/_/g, " ")
+    : "Coordination Hub";
+
+  const quickActions = [
+    { label: "New Case", href: "/dashboard/cases/new", icon: PlusCircle, tone: "blue" },
+    { label: "Intake Queue", href: "/dashboard/intake", icon: ClipboardList, tone: "slate" },
+    { label: "Call Pride", href: `tel:${CONTACT_PHONE}`, icon: PhoneCall, tone: "green" },
+    { label: "Email Pride", href: `mailto:${CONTACT_EMAIL}`, icon: Mail, tone: "amber" },
+    { label: "Reports", href: "/dashboard/reports", icon: MessageSquare, tone: "purple" },
+  ];
+
+  const actionStyles: Record<string, string> = {
+    blue: "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
+    slate: "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    amber: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    purple: "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+  };
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Header — title + date only */}
+      {/* Command Header */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 lg:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-1">
-              <CalendarDays className="w-4 h-4 text-blue-600" />
-              {todayLabel}
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="w-4 h-4 text-blue-600" />
+                {todayLabel}
+              </span>
+              <span className="hidden sm:inline text-gray-300">|</span>
+              <span className="capitalize">{displayRole}</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              National Service Delivery Coordination — priority cases, rapid actions.
+            <h1 className="text-2xl font-bold text-gray-900">
+              {greeting}, {displayName}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              National War Room status, priority cases, and rapid coordination actions.
             </p>
           </div>
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 xl:justify-end">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
                 <Link
                   key={action.label}
                   href={action.href}
-                  className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${action.tone}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${actionStyles[action.tone]}`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{action.label}</span>
@@ -156,104 +209,53 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Duty Phone</p>
+            <a href={`tel:${CONTACT_PHONE}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700">
+              {CONTACT_PHONE}
+            </a>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Duty Email</p>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700 break-all">
+              {CONTACT_EMAIL}
+            </a>
+          </div>
           <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
             <p className="text-xs font-medium text-gray-500 uppercase">Open Priorities</p>
             <p className="text-sm font-semibold text-gray-900">
               {stats.bySeverity.critical + stats.bySeverity.high} critical/high cases
             </p>
           </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-            <p className="text-xs font-medium text-gray-500 uppercase">Resolution Rate</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {stats.totalCases > 0 ? ((stats.resolvedCases / stats.totalCases) * 100).toFixed(1) : "0.0"}%
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-            <p className="text-xs font-medium text-gray-500 uppercase">Overdue Cases</p>
-            <p className="text-sm font-semibold text-amber-600">{stats.overdueCases}</p>
-          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Active</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Activity className="w-4 h-4 text-blue-600" />
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className={`bg-white rounded-xl border ${card.border} shadow-sm p-4`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{card.label}</span>
+                <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center`}>
+                  <Icon className={`w-4 h-4 ${card.color}`} />
+                </div>
+              </div>
+              <p className={`text-2xl font-bold ${card.color}`}>
+                {card.value.toLocaleString()}
+              </p>
             </div>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">{stats.totalCases.toLocaleString()}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-red-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Critical</span>
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-red-600">{stats.bySeverity.critical}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-orange-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">High</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-orange-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-orange-600">{stats.bySeverity.high}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-amber-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Overdue</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-amber-600">{stats.overdueCases}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-green-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Resolved</span>
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-green-600">{stats.resolvedCases}</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-purple-100 shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Esc. Today</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-purple-600" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-purple-600">{stats.escalationsDueToday}</p>
-        </div>
+          );
+        })}
       </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cases by Province */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-700">Cases by Province</h3>
-            <button
-              onClick={handleExportByProvince}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
-              title="Export CSV"
-            >
-              <Download className="w-3 h-3" />
-              CSV
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Cases by Province</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={stats.casesByProvince} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -278,17 +280,7 @@ export default function DashboardPage() {
 
         {/* Cases by Sector */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-700">Cases by Sector</h3>
-            <button
-              onClick={handleExportBySector}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
-              title="Export CSV"
-            >
-              <Download className="w-3 h-3" />
-              CSV
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Cases by Sector</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
