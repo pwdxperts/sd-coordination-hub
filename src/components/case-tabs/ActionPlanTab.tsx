@@ -1,5 +1,6 @@
 "use client";
 import VerificationChecklist from "@/components/case-tabs/VerificationChecklist";
+import ClassificationTab from "@/components/case-tabs/ClassificationTab";
 import { useState, useEffect } from "react";
 import { Save, ArrowRight, CheckCircle } from "lucide-react";
 
@@ -63,8 +64,8 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
     setSaving(false);
   };
 
-  // Step 1 (new_submission): Show verification checklist instead of generic action plan
-  if (caseStatus === "new_submission" || (caseStatus !== "new_submission" && caseData?.actionPlan?.startsWith("VERIFICATION:"))) {
+  // Step 1 (new_submission): Show verification checklist
+  if (caseStatus === "new_submission") {
     return (
       <VerificationChecklist
         caseId={caseId}
@@ -72,6 +73,21 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
         currentUser={currentUser}
         caseData={caseData}
         onVerified={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  // Step 2 (under_verification): Show classification form + verification summary from Step 1
+  // Also show read-only classification summary for all subsequent steps
+  if (caseStatus === "under_verification" ||
+      (caseData?.actionPlan?.startsWith("VERIFICATION:") && caseStatus !== "new_submission")) {
+    return (
+      <ClassificationTab
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onClassified={() => { window.location.reload(); }}
       />
     );
   }
