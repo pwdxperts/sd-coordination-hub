@@ -128,20 +128,19 @@ export default function CaseDetailPage() {
     setSelectedAssigneeId(data?.assignedToId || data?.assignedTo?.id || "");
   };
 
-  const loadAssignableUsers = async () => {
+  const loadAssignableUsers = async (forStep?: string) => {
     setAssignmentLoading(true);
     try {
-      const response = await fetch(`/api/users/assignable?caseId=${params.id}`);
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Could not load assignable users");
-      }
-      const data = await response.json();
+      const step = forStep || caseData?.status || "assigned";
+      const province = caseData?.province?.name ? `&province=${encodeURIComponent(caseData.province.name)}` : "";
+      const response = await fetch(`/api/users/by-step?step=${step}${province}`);
+      if (!response.ok) throw new Error("Could not load users");
+      const data: any = await response.json();
       setAssignableUsers(data.users || []);
     } catch (error) {
       setActionStatus({
         type: "error",
-        message: error instanceof Error ? error.message : "Could not load assignable users.",
+        message: error instanceof Error ? error.message : "Could not load users.",
       });
     } finally {
       setAssignmentLoading(false);
@@ -356,17 +355,29 @@ export default function CaseDetailPage() {
             </div>
             <div className="space-y-4 px-5 py-4">
               <label className="block">
-                <span className="text-xs font-medium text-gray-600">Responsible person</span>
+                <span className="text-xs font-medium text-gray-600">Assign for step</span>
+                <select
+                  defaultValue={caseData?.status}
+                  onChange={(e) => { loadAssignableUsers(e.target.value); setSelectedAssigneeId(""); }}
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 mb-3"
+                >
+                  {["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","escalated","resolved"].map(s => (
+                    <option key={s} value={s}>{s.replace(/_/g," ").replace(/\w/g,l=>l.toUpperCase())}</option>
+                  ))}
+                </select>
+                <span className="text-xs font-medium text-gray-600">
+                  Responsible person {assignableUsers.length > 0 ? `(${assignableUsers.length} available)` : ""}
+                </span>
                 <select
                   value={selectedAssigneeId}
                   onChange={(event) => setSelectedAssigneeId(event.target.value)}
                   disabled={assignmentLoading}
                   className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
                 >
-                  <option value="">{assignmentLoading ? "Loading users..." : "Select a person"}</option>
+                  <option value="">{assignmentLoading ? "Loading users..." : assignableUsers.length === 0 ? "No users found for this step" : "Select a person"}</option>
                   {assignableUsers.map((person) => (
                     <option key={person.id} value={person.id}>
-                      {person.name} - {person.role.replace(/_/g, " ")}
+                      {person.name} — {person.role.replace(/_/g, " ")} {person.province ? `(${person.province})` : ""}
                     </option>
                   ))}
                 </select>
