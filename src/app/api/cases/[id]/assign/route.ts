@@ -46,8 +46,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Create task for the assignee with clear action description
     const stepDescriptions: Record<string,string> = {
-      "new_submission":     "Your task: Review this submission. Click Mark as Verified if valid, or Reject with a reason.",
-      "under_verification": "Your task: Classify this case — set severity level and sector, then click Classify Case.",
+      "new_submission":     "Your task: Verify this submission. Open the ✓ Verify tab — complete the checklist, capture GPS, upload evidence, then submit.",
+      "under_verification": "Your task: Classify this case. Open the ✓ Classify tab — set severity, sector and root cause, then click Classify Case.",
       "classified":         "Your task: Assign this case to the right provincial coordinator.",
       "assigned":           "Your task: Submit a detailed action plan with timeline and resources in the Action Plan tab.",
       "action_plan":        "Your task: Begin on-ground intervention. Upload field evidence and update progress % regularly.",
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       "escalated":          "Your task: Respond to this escalation and mark it resolved with your decision.",
       "resolved":           "Your task: Review and formally close this case.",
     };
-    const currentStep = nextStatus || caseData.status;
-    const taskDesc = stepDescriptions[currentStep] || `Action required at step: ${currentStep}`;
+    // Always use the CURRENT case status to describe what the assignee will DO
+    const taskDesc = stepDescriptions[caseData.status] || `Action required at step: ${caseData.status}`;
 
     await prisma.task.create({
       data: {
