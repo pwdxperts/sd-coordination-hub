@@ -343,7 +343,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value: any, name: string) => [value, name === "count" ? "Total Cases" : "Resolved"]} />
+              <Tooltip formatter={(value: any, name: any) => [value, name === "count" ? "Total Cases" : "Resolved"]} />
               <Legend formatter={(v) => v === "count" ? "Total Cases" : "Resolved"} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
               <Bar dataKey="count" fill="#3b82f6" radius={[3, 3, 0, 0]} />
               <Bar dataKey="resolved" fill="#22c55e" radius={[3, 3, 0, 0]} />
