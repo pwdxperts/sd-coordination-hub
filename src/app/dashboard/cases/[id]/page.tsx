@@ -116,6 +116,7 @@ export default function CaseDetailPage() {
   };
 
   useEffect(() => {
+    fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(d => { if (d?.user) setCurrentUser(d.user); });
     fetchCase();
   }, [params.id]);
 
