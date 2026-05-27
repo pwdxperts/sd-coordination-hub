@@ -52,6 +52,64 @@ const STATUS_LABELS: Record<string, string> = {
   escalated: "Escalated", resolved: "Resolved", closed: "Closed", reopened: "Reopened",
 };
 
+// What each step requires the ASSIGNED PERSON to do
+const STEP_GUIDANCE: Record<string, { title: string; description: string; myJob: string; color: string }> = {
+  new_submission: {
+    title: "Step 1 — Intake & Logging",
+    description: "This case has just been received and needs your review.",
+    myJob: "Review the submission: Is the location real? Is the description clear? Is this a genuine service delivery issue? If yes, click ✓ Mark as Verified. If not, use the Reject button with a reason.",
+    color: "blue",
+  },
+  under_verification: {
+    title: "Step 2 — Classification",
+    description: "This case has been verified and needs to be classified.",
+    myJob: "Set the correct Severity Level (Critical/High/Moderate/Stable), confirm the Sector and Province, then click ✓ Classify Case to advance it for assignment.",
+    color: "purple",
+  },
+  classified: {
+    title: "Step 3 — Assignment",
+    description: "This case is classified and ready to be assigned to a coordinator.",
+    myJob: "Click 'Assign to Person' to select the right Provincial Coordinator or Municipal User for this case. They will receive an email and a task.",
+    color: "teal",
+  },
+  assigned: {
+    title: "Step 4 — Action Plan",
+    description: "This case has been assigned to you. Submit your action plan.",
+    myJob: "Go to the Action Plan tab: write a detailed action plan with timeline and resources. Set a target date. Click ✓ Submit Action Plan when ready.",
+    color: "orange",
+  },
+  action_plan: {
+    title: "Step 5 — Intervention",
+    description: "The action plan has been approved. Intervention must now begin.",
+    myJob: "Go to the Action Plan tab: update your progress %, upload field evidence in the Evidence tab, and document any blockers. Click ✓ Begin Intervention to mark you have started.",
+    color: "red",
+  },
+  intervention: {
+    title: "Step 6 — Monitoring",
+    description: "Intervention is underway. Update progress and upload evidence.",
+    myJob: "Upload photos and reports in the Evidence tab. Update the progress % in Action Plan. When the work is 100% complete, click ✓ Mark Intervention Complete to move to monitoring.",
+    color: "amber",
+  },
+  monitoring: {
+    title: "Step 7 — Verify & Resolve",
+    description: "Intervention is complete. Verify the outcome and close the case.",
+    myJob: "Review the Evidence tab to confirm the work was done properly. Check progress is at 100%. If satisfied, click ✓ Mark Resolved. If not, post a comment in Timeline requesting corrections.",
+    color: "green",
+  },
+  escalated: {
+    title: "⚠ Escalated — Needs Your Response",
+    description: "This case has been escalated and requires your authority.",
+    myJob: "Read the escalation reason in the Escalations tab. Take the necessary action. Then click Mark Resolved in the Escalations tab with your response/decision.",
+    color: "red",
+  },
+  resolved: {
+    title: "Step 8 — Closure",
+    description: "This case has been resolved and can be closed.",
+    myJob: "Review the resolution notes. Add any lessons learned. Click Close Case to archive it.",
+    color: "green",
+  },
+};
+
 const STATUS_TRANSITIONS: Record<string, string[]> = {
   new_submission: ["under_verification"],
   under_verification: ["classified", "duplicate"],
@@ -66,17 +124,18 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   reopened: ["action_plan", "intervention"],
 };
 
+// Labels from assignee's perspective — what THEY are doing right now
 const ACTION_LABELS: Record<string, string> = {
-  under_verification: "Send to Verification",
-  duplicate: "Mark Duplicate",
-  classified: "Classify",
-  assigned: "Assign",
-  action_plan: "Request Action Plan",
-  intervention: "Start Intervention",
-  monitoring: "Begin Monitoring",
-  escalated: "Escalate Case",
-  resolved: "Mark Resolved",
-  closed: "Close Case",
+  under_verification: "✓ Mark as Verified",
+  duplicate:          "Mark as Duplicate",
+  classified:         "✓ Classify Case",
+  assigned:           "Assign to Person",
+  action_plan:        "✓ Submit Action Plan",
+  intervention:       "✓ Begin Intervention",
+  monitoring:         "✓ Mark Intervention Complete",
+  escalated:          "⚠ Escalate Case",
+  resolved:           "✓ Mark Resolved",
+  closed:             "Close Case",
   reopened: "Reopen",
 };
 
@@ -411,6 +470,38 @@ export default function CaseDetailPage() {
                 {savingStatus === "assigned" ? "Assigning..." : "Assign Case"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step Guidance Banner — shows assigned person what to do */}
+      {caseData.status && STEP_GUIDANCE[caseData.status] && (
+        <div className={`rounded-xl border p-4 ${
+          STEP_GUIDANCE[caseData.status].color === "blue" ? "bg-blue-50 border-blue-200" :
+          STEP_GUIDANCE[caseData.status].color === "purple" ? "bg-purple-50 border-purple-200" :
+          STEP_GUIDANCE[caseData.status].color === "teal" ? "bg-teal-50 border-teal-200" :
+          STEP_GUIDANCE[caseData.status].color === "orange" ? "bg-orange-50 border-orange-200" :
+          STEP_GUIDANCE[caseData.status].color === "red" ? "bg-red-50 border-red-200" :
+          STEP_GUIDANCE[caseData.status].color === "amber" ? "bg-amber-50 border-amber-200" :
+          STEP_GUIDANCE[caseData.status].color === "green" ? "bg-green-50 border-green-200" :
+          "bg-gray-50 border-gray-200"
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900 mb-1">{STEP_GUIDANCE[caseData.status].title}</p>
+              <p className="text-xs text-gray-600 mb-2">{STEP_GUIDANCE[caseData.status].description}</p>
+              <div className="bg-white/70 rounded-lg px-3 py-2 border border-current/10">
+                <p className="text-xs font-semibold text-gray-700 mb-0.5">Your action:</p>
+                <p className="text-xs text-gray-600">{STEP_GUIDANCE[caseData.status].myJob}</p>
+              </div>
+            </div>
+            {caseData.assignedTo && (
+              <div className="flex-shrink-0 text-right">
+                <p className="text-xs text-gray-500">Assigned to</p>
+                <p className="text-xs font-semibold text-gray-800">{caseData.assignedTo.name}</p>
+                <p className="text-[10px] text-gray-500">{caseData.assignedTo.role?.replace(/_/g," ")}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -44,13 +44,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
 
-    // Create task for the assignee
+    // Create task for the assignee with clear action description
+    const stepDescriptions: Record<string,string> = {
+      "new_submission":     "Your task: Review this submission. Click Mark as Verified if valid, or Reject with a reason.",
+      "under_verification": "Your task: Classify this case — set severity level and sector, then click Classify Case.",
+      "classified":         "Your task: Assign this case to the right provincial coordinator.",
+      "assigned":           "Your task: Submit a detailed action plan with timeline and resources in the Action Plan tab.",
+      "action_plan":        "Your task: Begin on-ground intervention. Upload field evidence and update progress % regularly.",
+      "intervention":       "Your task: Verify intervention is complete. Review evidence and mark resolved when satisfied.",
+      "monitoring":         "Your task: Respond to this escalation and provide your decision.",
+      "escalated":          "Your task: Respond to this escalation and mark it resolved with your decision.",
+      "resolved":           "Your task: Review and formally close this case.",
+    };
+    const currentStep = nextStatus || caseData.status;
+    const taskDesc = stepDescriptions[currentStep] || `Action required at step: ${currentStep}`;
+
     await prisma.task.create({
       data: {
         title: `[${caseData.referenceNumber}] ${caseData.title.substring(0, 80)}`,
-        description: `Case assigned for action at step: ${nextStatus || caseData.status}`,
+        description: taskDesc,
         status: "pending",
-        priority: "medium",
+        priority: caseData.severityLevel === "Critical" ? "critical" : caseData.severityLevel === "High" ? "high" : "medium",
         assignedToId,
         createdById: access.user.id,
         caseId: id,

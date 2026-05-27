@@ -13,13 +13,13 @@ const NEXT_STATUS: Record<string,string> = {
 };
 
 const NEXT_LABELS: Record<string,string> = {
-  new_submission: "Mark as Verified",
-  under_verification: "Classify Case",
-  classified: "Mark as Assigned",
-  assigned: "Submit Action Plan",
-  action_plan: "Begin Intervention",
-  intervention: "Move to Monitoring",
-  monitoring: "Mark Resolved",
+  new_submission:     "✓ Mark as Verified",
+  under_verification: "✓ Classify Case",
+  classified:         "Assign to Person",
+  assigned:           "✓ Submit Action Plan",
+  action_plan:        "✓ Begin Intervention",
+  intervention:       "✓ Mark Intervention Complete",
+  monitoring:         "✓ Mark Resolved",
 };
 
 export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseData, onStatusChange }: any) {
