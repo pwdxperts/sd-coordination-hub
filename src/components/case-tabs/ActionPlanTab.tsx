@@ -95,10 +95,8 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
     );
   }
 
-  // Steps 3–7 (classified, assigned, action_plan, intervention, monitoring, resolved):
-  // Show coordinator plan tab with full context from Steps 1 & 2
-  const coordinatorSteps = ["classified","assigned","action_plan","intervention","monitoring","resolved","closed"];
-  if (coordinatorSteps.includes(caseStatus)) {
+  // Steps 3–4 (classified, assigned): Coordinator submits action plan
+  if (caseStatus === "classified" || caseStatus === "assigned") {
     return (
       <CoordinatorPlanTab
         caseId={caseId}
@@ -106,6 +104,32 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
         currentUser={currentUser}
         caseData={caseData}
         onAdvanced={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  // Steps 5–6 (action_plan, intervention): Rapid Response uploads evidence + marks complete
+  if (caseStatus === "action_plan" || caseStatus === "intervention") {
+    return (
+      <InterventionTab
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onAdvanced={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  // Step 7 + resolved/closed: Coordinator reviews all evidence and signs off
+  if (caseStatus === "monitoring" || caseStatus === "resolved" || caseStatus === "closed") {
+    return (
+      <MonitoringTab
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onResolved={() => { window.location.reload(); }}
       />
     );
   }
