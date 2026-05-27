@@ -195,6 +195,13 @@ export default function CaseDetailPage() {
     fetchCase();
   }, [params.id]);
 
+  // Auto-open action tab for step 1 (verify) and step 2 (classify) so users see the form
+  useEffect(() => {
+    if (caseData?.status === "new_submission" || caseData?.status === "under_verification") {
+      setActiveTab("action_plan");
+    }
+  }, [caseData?.status]);
+
   const refreshCase = async () => {
     const response = await fetch(`/api/cases/${params.id}`);
     if (!response.ok) throw new Error("Could not refresh case details");
