@@ -94,7 +94,7 @@ export default function TasksPage() {
     // First get current user, then load their tasks
     fetch("/api/auth/me")
       .then(r => r.ok ? r.json() : null)
-      .then(d => {
+      .then((d: any) => {
         if (d?.user) {
           setCurrentUser(d.user);
           loadTasks(d.user.id, false);
@@ -103,7 +103,7 @@ export default function TasksPage() {
         }
       })
       .catch(() => setLoading(false));
-    fetch("/api/auth/users").then(r => r.ok ? r.json() : {}).then(d => setUsers(d.users || []));
+    fetch("/api/auth/users").then(r => r.ok ? r.json() : {}).then((d: any) => setUsers(d.users || []));
   }, []);
 
   const loadTasks = (userId?: string, all?: boolean) => {
