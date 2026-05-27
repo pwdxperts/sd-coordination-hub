@@ -408,7 +408,7 @@ export default function CaseDetailPage() {
             { step: "intervention", label: "Intervention", desc: "Active intervention underway on the ground.", who: "Rapid Response / Municipal User", actions: ["Upload progress evidence", "Update % completion", "Log blockers or challenges"] },
             { step: "monitoring", label: "Monitoring", desc: "Intervention completed, case under verification monitoring.", who: "Provincial Coordinator", actions: ["Verify completion claims", "Request additional evidence", "Confirm community satisfaction"] },
             { step: "resolved", label: "Resolved", desc: "Case fully resolved and verified. Closed with lessons learned.", who: "Hub Analyst / System Admin", actions: ["Record resolution notes", "Document lessons learned", "Archive case"] },
-          ] as const).map(({ step, label, desc, who, actions }, i, arr) => {
+          ]).map(({ step, label, desc, who, actions }: { step: string; label: string; desc: string; who: string; actions: string[] }, i, arr) => {
             const stepOrder = ["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","resolved"];
             const currentIdx = stepOrder.indexOf(caseData.status);
             const stepIdx = i;
@@ -419,7 +419,7 @@ export default function CaseDetailPage() {
               <div key={step} className="flex items-start flex-1">
                 <div className="flex flex-col items-center group relative">
                   <button
-                    onClick={() => setActiveWorkflowStep({ step, label, desc, who, actions: actions as string[] })}
+                    onClick={() => setActiveWorkflowStep({ step, label, desc, who, actions })}
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer hover:scale-110 hover:shadow-md ${
                       isCompleted ? "bg-green-500 text-white hover:bg-green-600" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100 hover:bg-blue-700" : "bg-gray-200 text-gray-400 hover:bg-gray-300"
                     }`}
