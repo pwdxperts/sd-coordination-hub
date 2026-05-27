@@ -227,16 +227,21 @@ export default function CaseDetailPage() {
 
     setSavingStatus("assigned");
     setActionStatus(null);
-    const canMoveToAssigned = (STATUS_TRANSITIONS[caseData.status] || []).includes("assigned");
-    const payload: Record<string, string> = { assignedToId: selectedAssigneeId };
-    if (canMoveToAssigned) payload.status = "assigned";
-    if (assignmentNote.trim()) payload.actionPlan = assignmentNote.trim();
+
+    // Determine the next status when assigning
+    const nextTransitions = STATUS_TRANSITIONS[caseData.status] || [];
+    const nextStatus = nextTransitions.find((s: string) => s !== "escalated") || caseData.status;
 
     try {
-      const response = await fetch(`/api/cases/${params.id}`, {
-        method: "PATCH",
+      // Use the /assign endpoint which: updates the case, creates a task, sends email, creates notification
+      const response = await fetch(`/api/cases/${params.id}/assign`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          assignedToId: selectedAssigneeId,
+          nextStatus,
+          comment: assignmentNote.trim() || undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -246,7 +251,7 @@ export default function CaseDetailPage() {
 
       await refreshCase();
       setAssignmentOpen(false);
-      setActionStatus({ type: "success", message: "Case assigned to an individual and workflow updated." });
+      setActionStatus({ type: "success", message: "Case assigned — task created and email notification sent." });
     } catch (error) {
       setActionStatus({
         type: "error",
