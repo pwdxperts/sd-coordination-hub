@@ -23,6 +23,21 @@ const TABS = [
   { id: "audit", label: "Audit Log", icon: Shield },
 ];
 
+// Dynamic label for the action_plan tab based on case status
+function getActionTabLabel(status: string): string {
+  const labels: Record<string, string> = {
+    new_submission:     "✓ Verify",
+    under_verification: "✓ Classify",
+    classified:         "Assign",
+    assigned:           "Action Plan",
+    action_plan:        "Intervention",
+    intervention:       "Update Progress",
+    monitoring:         "Resolve",
+    escalated:          "Respond",
+  };
+  return labels[status] || "Action Plan";
+}
+
 const SEVERITY_COLORS: Record<string, string> = {
   Critical: "bg-red-50 text-red-700 border-red-200",
   High: "bg-orange-50 text-orange-700 border-orange-200",
@@ -625,6 +640,7 @@ export default function CaseDetailPage() {
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
+          const tabLabel = tab.id === "action_plan" && caseData ? getActionTabLabel(caseData.status) : tab.label;
           return (
             <button
               key={tab.id}
