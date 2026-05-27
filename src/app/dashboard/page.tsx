@@ -10,7 +10,7 @@ import {
 import {
   AlertCircle, TrendingUp, CheckCircle2, Clock, ArrowUpRight,
   Activity, Users, MapPin, Building2, ExternalLink, AlertTriangle,
-  CalendarDays, Mail, PhoneCall, PlusCircle, ClipboardList, MessageSquare,
+  CalendarDays, PlusCircle, ClipboardList, MessageSquare,
 } from "lucide-react";
 
 const SEVERITY_COLORS = {
@@ -29,8 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
   resolved: "Resolved", closed: "Closed", reopened: "Reopened",
 };
 
-const CONTACT_PHONE = "0797224188";
-const CONTACT_EMAIL = "pride@pwdxperts.co.za";
+
 
 const ROLE_LABELS: Record<string, string> = {
   system_admin: "System Admin",
@@ -157,8 +156,8 @@ export default function DashboardPage() {
   const quickActions = [
     { label: "New Case", href: "/dashboard/cases/new", icon: PlusCircle, tone: "blue" },
     { label: "Intake Queue", href: "/dashboard/intake", icon: ClipboardList, tone: "slate" },
-    { label: "Call Pride", href: `tel:${CONTACT_PHONE}`, icon: PhoneCall, tone: "green" },
-    { label: "Email Pride", href: `mailto:${CONTACT_EMAIL}`, icon: Mail, tone: "amber" },
+    { label: "My Tasks", href: "/dashboard/tasks", icon: ClipboardList, tone: "green" },
+    { label: "Escalations", href: "/dashboard/escalations", icon: TrendingUp, tone: "amber" },
     { label: "Reports", href: "/dashboard/reports", icon: MessageSquare, tone: "purple" },
   ];
 
@@ -211,22 +210,16 @@ export default function DashboardPage() {
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-            <p className="text-xs font-medium text-gray-500 uppercase">Duty Phone</p>
-            <a href={`tel:${CONTACT_PHONE}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700">
-              {CONTACT_PHONE}
-            </a>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-            <p className="text-xs font-medium text-gray-500 uppercase">Duty Email</p>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-semibold text-gray-900 hover:text-blue-700 break-all">
-              {CONTACT_EMAIL}
-            </a>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
             <p className="text-xs font-medium text-gray-500 uppercase">Open Priorities</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {stats.bySeverity.critical + stats.bySeverity.high} critical/high cases
-            </p>
+            <p className="text-sm font-semibold text-gray-900">{stats.bySeverity.critical + stats.bySeverity.high} critical / high</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Resolution Rate</p>
+            <p className="text-sm font-semibold text-gray-900">{stats.totalCases > 0 ? Math.round((stats.resolvedCases / stats.totalCases) * 100) : 0}% resolved</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-xs font-medium text-gray-500 uppercase">Escalations Today</p>
+            <p className="text-sm font-semibold text-gray-900">{stats.escalationsDueToday} active</p>
           </div>
         </div>
       </div>

@@ -124,29 +124,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {!sidebarCollapsed && (
           <div className="border-t border-gray-100 p-3 mt-auto">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Setup Checklist</p>
-            <div className="space-y-1.5">
-              {[
-                { label: "Database connected", done: true },
-                { label: "Auth configured", done: true },
-                { label: "MFA enabled", done: false, partial: true },
-                { label: "Email intake active", done: false, partial: true },
-                { label: "WhatsApp intake", done: false },
-                { label: "Social media scraper", done: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2 text-[11px]">
-                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? "bg-green-100" : item.partial ? "bg-amber-100" : "bg-gray-100"}`}>
-                    {item.done ? (
-                      <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    ) : item.partial ? (
-                      <svg className="w-2.5 h-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    ) : (
-                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                    )}
-                  </div>
-                  <span className={item.done ? "text-gray-500" : item.partial ? "text-gray-400" : "text-gray-300"}>{item.label}</span>
-                </div>
-              ))}
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">System</p>
+            <div className="space-y-1">
+              <Link href="/dashboard/settings" className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Settings
+              </Link>
+              <Link href="/dashboard/reports" className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Reports
+              </Link>
+              <Link href="/dashboard/audit" className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                Audit Log
+              </Link>
             </div>
           </div>
         )}
