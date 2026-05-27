@@ -334,6 +334,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Province vs Resolved Chart */}
+      {stats.casesByProvince && stats.casesByProvince.filter((p: any) => p.count > 0).length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Cases by Province — Active vs Resolved</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={stats.casesByProvince.filter((p: any) => p.count > 0)} margin={{ top: 4, right: 16, left: 0, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value: any, name: string) => [value, name === "count" ? "Total Cases" : "Resolved"]} />
+              <Legend formatter={(v) => v === "count" ? "Total Cases" : "Resolved"} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="resolved" fill="#22c55e" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Recent Critical Cases */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
