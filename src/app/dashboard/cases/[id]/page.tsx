@@ -651,227 +651,32 @@ export default function CaseDetailPage() {
       )}
 
       {activeTab === "timeline" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Activity Timeline</h3>
-          <div className="relative">
-            {caseData.auditLogs?.length > 0 ? (
-              <div className="space-y-0">
-                {caseData.auditLogs.map((log: any, i: number) => (
-                  <div key={log.id} className="flex gap-4 pb-4 relative">
-                    {i < caseData.auditLogs.length - 1 && (
-                      <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-gray-200" />
-                    )}
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      log.action.startsWith("CASE_CREATED") ? "bg-green-100" :
-                      log.action === "ESCALATED" ? "bg-red-100" :
-                      "bg-blue-100"
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${
-                        log.action.startsWith("CASE_CREATED") ? "bg-green-500" :
-                        log.action === "ESCALATED" ? "bg-red-500" :
-                        "bg-blue-500"
-                      }`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">{log.action.replace(/_/g, " ")}</p>
-                        <span className="text-xs text-gray-400">{new Date(log.createdAt).toLocaleString()}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{log.comment || "-"}</p>
-                      {log.user && <p className="text-xs text-gray-400 mt-0.5">by {log.user.name}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 text-center py-4">No timeline entries</p>
-            )}
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <TimelineTab caseId={caseData.id} currentUserId={currentUser?.id} />
         </div>
       )}
 
       {activeTab === "action_plan" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-700">Action Plan</h3>
-            {caseData.progressPercent !== undefined && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Progress</span>
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${caseData.progressPercent}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-gray-700">{caseData.progressPercent}%</span>
-              </div>
-            )}
-          </div>
-
-          {caseData.actionPlan && (
-            <p className="text-sm text-gray-600 mb-4">{caseData.actionPlan}</p>
-          )}
-
-          {caseData.blockers && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
-              <p className="text-xs font-medium text-orange-700">Blockers</p>
-              <p className="text-sm text-orange-600">{caseData.blockers}</p>
-            </div>
-          )}
-
-          {/* Milestones */}
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Milestones</h4>
-          {caseData.milestones?.length > 0 ? (
-            <div className="space-y-2">
-              {caseData.milestones.map((m: any) => (
-                <div key={m.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    m.status === "completed" ? "bg-green-100" :
-                    m.status === "in_progress" ? "bg-blue-100" :
-                    m.status === "overdue" ? "bg-red-100" :
-                    "bg-gray-100"
-                  }`}>
-                    {m.status === "completed" ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    ) : m.status === "in_progress" ? (
-                      <Activity className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <Clock className="w-4 h-4 text-gray-400" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{m.title}</p>
-                    {m.description && <p className="text-xs text-gray-500">{m.description}</p>}
-                    {m.assignedTo && <p className="text-xs text-gray-400 mt-0.5">Assigned to {m.assignedTo}</p>}
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    MILESTONE_COLORS[m.status] || "bg-gray-100 text-gray-600"
-                  }`}>
-                    {m.status.replace(/_/g, " ")}
-                  </span>
-                  {m.dueDate && (
-                    <span className="text-xs text-gray-400">{new Date(m.dueDate).toLocaleDateString()}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-4">No milestones defined</p>
-          )}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <ActionPlanTab caseId={caseData.id} caseStatus={caseData.status} currentUser={currentUser} caseData={caseData} onStatusChange={(s: string) => setCaseData((prev: any) => ({ ...prev, status: s }))} />
         </div>
       )}
 
       {activeTab === "evidence" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Evidence Files</h3>
-          {caseData.evidence?.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {caseData.evidence.map((e: any) => (
-                <div key={e.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <Paperclip className="w-5 h-5 text-gray-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{e.fileName}</p>
-                    {e.description && <p className="text-xs text-gray-500">{e.description}</p>}
-                  </div>
-                  <span className="text-xs text-gray-400">{new Date(e.createdAt).toLocaleDateString()}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Paperclip className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No evidence uploaded</p>
-            </div>
-          )}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <EvidenceTab caseId={caseData.id} currentUser={currentUser} />
         </div>
       )}
 
       {activeTab === "escalations" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Escalation History</h3>
-          {caseData.escalations?.length > 0 ? (
-            <div className="space-y-3">
-              {caseData.escalations.map((esc: any) => (
-                <div key={esc.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                    esc.level === "L5" || esc.level === "L4" ? "bg-red-100" :
-                    esc.level === "L3" ? "bg-orange-100" :
-                    "bg-amber-100"
-                  }`}>
-                    <AlertTriangle className={`w-4 h-4 ${
-                      esc.level === "L5" || esc.level === "L4" ? "text-red-600" :
-                      esc.level === "L3" ? "text-orange-600" :
-                      "text-amber-600"
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{esc.level}</span>
-                      <span className="text-xs text-gray-500">→ {esc.escalatedTo}</span>
-                      <span className={`ml-auto px-2 py-0.5 rounded text-xs font-medium ${
-                        esc.status === "active" ? "bg-red-50 text-red-700" :
-                        esc.status === "responded" ? "bg-amber-50 text-amber-700" :
-                        "bg-green-50 text-green-700"
-                      }`}>
-                        {esc.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">{esc.reason}</p>
-                    {esc.response && (
-                      <div className="mt-2 bg-white rounded p-2 border border-gray-100">
-                        <p className="text-xs text-gray-500">Response:</p>
-                        <p className="text-sm text-gray-700">{esc.response}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-4 mt-1 text-xs text-gray-400">
-                      <span>Escalated: {new Date(esc.escalatedAt).toLocaleString()}</span>
-                      {esc.respondedAt && <span>Responded: {new Date(esc.respondedAt).toLocaleString()}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <AlertTriangle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No escalations recorded</p>
-            </div>
-          )}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <EscalationsTab caseId={caseData.id} caseData={caseData} currentUser={currentUser} onEscalated={() => setCaseData((prev: any) => ({ ...prev, status: "escalated" }))} />
         </div>
       )}
 
       {activeTab === "audit" && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Full Audit Log</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200">
-                  <th className="py-2 px-3">Date/Time</th>
-                  <th className="py-2 px-3">User</th>
-                  <th className="py-2 px-3">Action</th>
-                  <th className="py-2 px-3">Comment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {caseData.auditLogs?.map((log: any) => (
-                  <tr key={log.id} className="border-b border-gray-50">
-                    <td className="py-2 px-3 text-xs text-gray-500">{new Date(log.createdAt).toLocaleString()}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{log.user?.name || "System"}</td>
-                    <td className="py-2 px-3">
-                      <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-xs text-gray-500 max-w-[300px] truncate">{log.comment || "-"}</td>
-                  </tr>
-                ))}
-                {(!caseData.auditLogs || caseData.auditLogs.length === 0) && (
-                  <tr><td colSpan={4} className="py-6 text-center text-gray-400 text-sm">No audit entries</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <AuditLogTab caseId={caseData.id} />
         </div>
       )}
     </div>
