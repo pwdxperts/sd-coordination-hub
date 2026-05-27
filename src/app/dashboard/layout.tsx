@@ -27,12 +27,14 @@ const navItems = [
 
 const provincialNavHrefs = new Set([
   "/dashboard",
+  "/dashboard/intake",
   "/dashboard/cases",
   "/dashboard/tasks",
   "/dashboard/escalations",
   "/dashboard/interventions",
   "/dashboard/geography",
   "/dashboard/reports",
+  "/dashboard/settings",
 ]);
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
