@@ -28,16 +28,17 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 // What each case step requires the assignee to do
+// Each status describes what the ASSIGNED PERSON must DO at that stage
 const CASE_STEP_ACTIONS: Record<string, { label: string; description: string; buttonLabel: string; buttonIcon: string; color: string }> = {
-  new_submission:     { label: "Verify Submission",        description: "Review this case and mark it as verified if genuine, or reject with a reason.", buttonLabel: "Open & Verify",        buttonIcon: "check",   color: "blue" },
-  under_verification: { label: "Classify Case",            description: "Set the severity level and sector for this case, then classify it.",            buttonLabel: "Open & Classify",      buttonIcon: "filter",  color: "purple" },
-  classified:         { label: "Assign to Coordinator",    description: "Assign this case to the right provincial coordinator or team.",                 buttonLabel: "Open & Assign",        buttonIcon: "user",    color: "teal" },
-  assigned:           { label: "Submit Action Plan",        description: "Write and submit a detailed action plan with timeline and target dates.",        buttonLabel: "Open & Write Plan",    buttonIcon: "file",    color: "orange" },
-  action_plan:        { label: "Begin Intervention",        description: "Start the on-ground work. Upload evidence and update your progress.",           buttonLabel: "Open & Update",        buttonIcon: "upload",  color: "red" },
-  intervention:       { label: "Upload Evidence & Progress","description": "Upload field photos/reports and update your progress % towards completion.",  buttonLabel: "Open & Upload",        buttonIcon: "upload",  color: "amber" },
-  monitoring:         { label: "Verify & Close Case",       description: "Review the evidence, confirm completion, and mark the case as resolved.",       buttonLabel: "Open & Resolve",       buttonIcon: "check",   color: "green" },
-  escalated:          { label: "Respond to Escalation",    description: "This case is escalated and requires your urgent response.",                     buttonLabel: "Open & Respond",       buttonIcon: "alert",   color: "red" },
-  resolved:           { label: "Close Case",               description: "Review the resolution and formally close this case.",                           buttonLabel: "Open Case",            buttonIcon: "check",   color: "gray" },
+  new_submission:     { label: "✓ Verify Submission",       description: "Open the Verify tab — complete the checklist, capture GPS, upload evidence, then submit.", buttonLabel: "Open & Verify",     buttonIcon: "check",   color: "blue" },
+  under_verification: { label: "✓ Classify Case",           description: "Open the Classify tab — set severity level, sector and root cause, then classify.",        buttonLabel: "Open & Classify",   buttonIcon: "filter",  color: "purple" },
+  classified:         { label: "Assign to Coordinator",     description: "Use the Assign button to assign this case to the right provincial coordinator.",           buttonLabel: "Open & Assign",     buttonIcon: "user",    color: "teal" },
+  assigned:           { label: "Submit Action Plan",         description: "Open the Action Plan tab — write your plan, set a due date, then submit.",                 buttonLabel: "Open & Submit Plan",buttonIcon: "file",    color: "orange" },
+  action_plan:        { label: "Begin Intervention",         description: "Start the on-ground work. Upload evidence and update your progress % in Action Plan.",    buttonLabel: "Open & Update",     buttonIcon: "upload",  color: "red" },
+  intervention:       { label: "Upload Evidence & Progress", description: "Upload field photos and reports. Update your progress % towards 100% completion.",        buttonLabel: "Open & Upload",     buttonIcon: "upload",  color: "amber" },
+  monitoring:         { label: "Verify & Resolve Case",      description: "Review evidence, confirm intervention is complete, then mark the case as Resolved.",      buttonLabel: "Open & Resolve",    buttonIcon: "check",   color: "green" },
+  escalated:          { label: "⚠ Respond to Escalation",   description: "This case is escalated and requires your urgent response. Open the Escalations tab.",     buttonLabel: "Open & Respond",    buttonIcon: "alert",   color: "red" },
+  resolved:           { label: "Close Case",                 description: "Review the resolution and formally close this case.",                                     buttonLabel: "Open Case",         buttonIcon: "check",   color: "gray" },
 };
 
 const SEV_COLORS: Record<string, string> = {

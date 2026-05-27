@@ -255,13 +255,17 @@ export default function CaseDetailPage() {
     const nextStatus = nextTransitions.find((s: string) => s !== "escalated") || caseData.status;
 
     try {
-      // Use the /assign endpoint which: updates the case, creates a task, sends email, creates notification
+      // Use the /assign endpoint — DO NOT auto-advance status for early steps
+      // The assignee advances the status themselves when they complete their form
+      const earlySteps = ["new_submission", "under_verification", "classified"];
+      const shouldAdvanceStatus = !earlySteps.includes(caseData.status);
       const response = await fetch(`/api/cases/${params.id}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assignedToId: selectedAssigneeId,
-          nextStatus,
+          // Only advance status for later steps (action_plan, intervention etc)
+          nextStatus: shouldAdvanceStatus ? nextStatus : undefined,
           comment: assignmentNote.trim() || undefined,
         }),
       });
