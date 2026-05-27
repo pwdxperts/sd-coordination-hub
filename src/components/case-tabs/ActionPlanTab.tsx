@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import VerificationChecklist from "@/components/case-tabs/VerificationChecklist";
+mport { useState, useEffect } from "react";
 import { Save, ArrowRight, CheckCircle } from "lucide-react";
 
 const NEXT_STATUS: Record<string,string> = {
@@ -61,6 +62,19 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
     }
     setSaving(false);
   };
+
+  // Step 1 (new_submission): Show verification checklist instead of generic action plan
+  if (caseStatus === "new_submission" || (caseStatus !== "new_submission" && caseData?.actionPlan?.startsWith("VERIFICATION:"))) {
+    return (
+      <VerificationChecklist
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onVerified={() => { window.location.reload(); }}
+      />
+    );
+  }
 
   if (loading) return <div className="p-8 flex justify-center"><div className="animate-spin h-6 w-6 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;
 

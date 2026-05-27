@@ -479,6 +479,22 @@ export default function CaseDetailPage() {
         </div>
       )}
 
+      {/* Verification complete banner for the verifier (read-only state) */}
+      {currentUser && caseData.assignedTo && caseData.status === "under_verification" &&
+       caseData.actionPlan?.startsWith("VERIFICATION:") &&
+       caseData.assignedTo.id !== currentUser.id && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-green-900">Verification Completed</p>
+            <p className="text-xs text-green-700">You have completed your verification step. This case has been assigned to the classifier. Your task is done.</p>
+          </div>
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium flex-shrink-0">Read-only</span>
+        </div>
+      )}
+
       {/* Step Guidance Banner — shows assigned person what to do */}
       {caseData.status && STEP_GUIDANCE[caseData.status] && (
         <div className={`rounded-xl border p-4 ${
