@@ -92,6 +92,7 @@ export default function CaseDetailPage() {
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [activeWorkflowStep, setActiveWorkflowStep] = useState<any>(null);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
   const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
   const [assignmentNote, setAssignmentNote] = useState("");
@@ -398,25 +399,35 @@ export default function CaseDetailPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-x-auto">
         <h3 className="text-sm font-semibold text-gray-700 mb-4">Case Workflow</h3>
         <div className="flex items-start min-w-[640px]">
-          {["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","resolved"].map((step, i, arr) => {
+          {([ 
+            { step: "new_submission", label: "Received", desc: "Case submitted and logged in the system.", who: "Hub Intake", actions: ["Verify the submission", "Check for duplicates", "Confirm contact details"] },
+            { step: "under_verification", label: "Verified", desc: "Submission verified for accuracy and completeness.", who: "Hub Intake / Analyst", actions: ["Confirm location details", "Validate sector classification", "Contact reporter if needed"] },
+            { step: "classified", label: "Classified", desc: "Case classified by severity, sector, and responsible sphere.", who: "Hub Analyst", actions: ["Set severity level", "Assign sector", "Link to responsible department"] },
+            { step: "assigned", label: "Assigned", desc: "Case assigned to a coordinator or rapid response team.", who: "Hub Analyst / Coordinator", actions: ["Select assignee", "Set SLA deadline", "Send notification to assignee"] },
+            { step: "action_plan", label: "Action Plan", desc: "Assigned official submits an action plan with timelines.", who: "Provincial Coordinator / Municipal User", actions: ["Upload action plan document", "Set target completion date", "List key dependencies"] },
+            { step: "intervention", label: "Intervention", desc: "Active intervention underway on the ground.", who: "Rapid Response / Municipal User", actions: ["Upload progress evidence", "Update % completion", "Log blockers or challenges"] },
+            { step: "monitoring", label: "Monitoring", desc: "Intervention completed, case under verification monitoring.", who: "Provincial Coordinator", actions: ["Verify completion claims", "Request additional evidence", "Confirm community satisfaction"] },
+            { step: "resolved", label: "Resolved", desc: "Case fully resolved and verified. Closed with lessons learned.", who: "Hub Analyst / System Admin", actions: ["Record resolution notes", "Document lessons learned", "Archive case"] },
+          ] as const).map(({ step, label, desc, who, actions }, i, arr) => {
             const stepOrder = ["new_submission","under_verification","classified","assigned","action_plan","intervention","monitoring","resolved"];
             const currentIdx = stepOrder.indexOf(caseData.status);
             const stepIdx = i;
             const isCompleted = currentIdx > stepIdx;
             const isCurrent = currentIdx === stepIdx;
-            const isPending = currentIdx < stepIdx;
             const isLast = i === arr.length - 1;
-            const shortLabels: Record<string,string> = { new_submission: "Received", under_verification: "Verified", classified: "Classified", assigned: "Assigned", action_plan: "Action Plan", intervention: "Intervention", monitoring: "Monitoring", resolved: "Resolved" };
             return (
               <div key={step} className="flex items-start flex-1">
-                <div className="flex flex-col items-center">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    isCompleted ? "bg-green-500 text-white" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-gray-200 text-gray-400"
-                  }`}>
+                <div className="flex flex-col items-center group relative">
+                  <button
+                    onClick={() => setActiveWorkflowStep({ step, label, desc, who, actions: actions as string[] })}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer hover:scale-110 hover:shadow-md ${
+                      isCompleted ? "bg-green-500 text-white hover:bg-green-600" : isCurrent ? "bg-blue-600 text-white ring-4 ring-blue-100 hover:bg-blue-700" : "bg-gray-200 text-gray-400 hover:bg-gray-300"
+                    }`}
+                  >
                     {isCompleted ? <CheckCircle className="w-4 h-4" /> : stepIdx + 1}
-                  </div>
+                  </button>
                   <p className={`text-[10px] mt-1.5 text-center leading-tight ${isCompleted ? "text-green-600 font-medium" : isCurrent ? "text-blue-700 font-semibold" : "text-gray-400"}`}>
-                    {shortLabels[step]}
+                    {label}
                   </p>
                 </div>
                 {!isLast && (
@@ -428,15 +439,55 @@ export default function CaseDetailPage() {
         </div>
         <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
           <span>Current: <strong className="text-gray-900">{STATUS_LABELS[caseData.status] || caseData.status}</strong></span>
-          {caseData.assignedTo && (
-            <span>Assigned to: <strong className="text-blue-700">{caseData.assignedTo.name}</strong></span>
-          )}
-          {!caseData.assignedTo && (
-            <button onClick={() => setAssignmentOpen(true)} className="text-blue-600 hover:underline font-medium">Assign now →</button>
-          )}
+          {caseData.assignedTo && <span>Assigned to: <strong className="text-blue-700">{caseData.assignedTo.name}</strong></span>}
+          {!caseData.assignedTo && <button onClick={() => setAssignmentOpen(true)} className="text-blue-600 hover:underline font-medium">Assign now →</button>}
           <span>Opened: {new Date(caseData.createdAt).toLocaleDateString()}</span>
+          <span className="text-blue-500 text-[10px]">Click any step for details</span>
         </div>
       </div>
+
+      {/* Workflow Step Detail Modal */}
+      {activeWorkflowStep && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setActiveWorkflowStep(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Workflow Step</p>
+                <h3 className="text-lg font-bold text-gray-900">{activeWorkflowStep.label}</h3>
+              </div>
+              <button onClick={() => setActiveWorkflowStep(null)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-600">{activeWorkflowStep.desc}</p>
+              <div className="bg-blue-50 rounded-lg px-4 py-3">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Responsible</p>
+                <p className="text-sm text-blue-900">{activeWorkflowStep.who}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Required Actions</p>
+                <ul className="space-y-1.5">
+                  {activeWorkflowStep.actions.map((action: string, i: number) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                      <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {action}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {activeWorkflowStep.step === caseData.status && (
+                <div className="bg-amber-50 rounded-lg px-4 py-3 text-xs text-amber-800">
+                  <strong>Current step</strong> — This is where the case currently stands.
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setActiveWorkflowStep(null)} className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
