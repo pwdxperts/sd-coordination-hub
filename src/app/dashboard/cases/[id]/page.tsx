@@ -96,6 +96,7 @@ export default function CaseDetailPage() {
   const [actionStatus, setActionStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [activeWorkflowStep, setActiveWorkflowStep] = useState<any>(null);
   const [assignmentLoading, setAssignmentLoading] = useState(false);
