@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!assignedToId) return NextResponse.json({ error: "Assignee required" }, { status: 400 });
 
     const [caseData, assignee] = await Promise.all([
-      prisma.case.findUnique({ where: { id }, select: { referenceNumber: true, title: true, status: true } }),
+      prisma.case.findUnique({ where: { id }, select: { referenceNumber: true, title: true, status: true, severityLevel: true } }),
       prisma.user.findUnique({ where: { id: assignedToId }, select: { id: true, name: true, email: true } }),
     ]);
 

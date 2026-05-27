@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
-import { parseSessionCookie } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
@@ -14,15 +12,11 @@ export async function GET(request: Request) {
     if (assignedToId) where.assignedToId = assignedToId;
     if (status && status !== "all") where.status = status;
 
+    // If no specific user requested and not asking for all, scope to provided user
+    // The frontend passes assignedToId from /api/auth/me so no cookie parsing needed
     if (!all && !assignedToId) {
-      try {
-        const cookieStore = await cookies();
-        const session = cookieStore.get("session");
-        if (session?.value) {
-          const payload = parseSessionCookie(session.value);
-          if (payload?.userId) where.assignedToId = payload.userId;
-        }
-      } catch {}
+      // Return empty — frontend must pass assignedToId from /api/auth/me
+      where.assignedToId = "__no_user__";
     }
 
     const tasks = await prisma.task.findMany({
@@ -31,7 +25,7 @@ export async function GET(request: Request) {
         assignedTo: { select: { id: true, name: true, email: true, role: true } },
         createdBy: { select: { id: true, name: true } },
         nextAssignee: { select: { id: true, name: true, role: true } },
-        case: { select: { id: true, referenceNumber: true, title: true } },
+        case: { select: { id: true, referenceNumber: true, title: true, status: true, severityLevel: true, province: { select: { name: true } } } },
       },
       orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
     });
@@ -65,7 +59,7 @@ export async function POST(request: Request) {
         assignedTo: { select: { id: true, name: true, email: true, role: true } },
         createdBy: { select: { id: true, name: true } },
         nextAssignee: { select: { id: true, name: true, role: true } },
-        case: { select: { id: true, referenceNumber: true, title: true } },
+        case: { select: { id: true, referenceNumber: true, title: true, status: true, severityLevel: true } },
       },
     });
     return NextResponse.json({ task });
