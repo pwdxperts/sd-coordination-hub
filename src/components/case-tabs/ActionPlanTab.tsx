@@ -2,6 +2,8 @@
 import VerificationChecklist from "@/components/case-tabs/VerificationChecklist";
 import ClassificationTab from "@/components/case-tabs/ClassificationTab";
 import CoordinatorPlanTab from "@/components/case-tabs/CoordinatorPlanTab";
+import InterventionTab from "@/components/case-tabs/InterventionTab";
+import MonitoringTab from "@/components/case-tabs/MonitoringTab";
 import { useState, useEffect } from "react";
 import { Save, ArrowRight, CheckCircle } from "lucide-react";
 

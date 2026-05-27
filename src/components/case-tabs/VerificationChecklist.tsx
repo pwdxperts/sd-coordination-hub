@@ -31,8 +31,9 @@ export default function VerificationChecklistTab({
   const [assigningNext, setAssigningNext] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const isReadOnly = caseStatus !== "new_submission" || (currentUser && caseData?.assignedTo?.id && caseData.assignedTo.id !== currentUser.id && caseStatus !== "new_submission");
+  // Read-only if: case has moved past new_submission (i.e. someone already verified it)
   const alreadyVerified = caseStatus !== "new_submission";
+  const isReadOnly = alreadyVerified;
 
   useEffect(() => {
     // Load existing verification data if available
