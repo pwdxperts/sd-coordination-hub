@@ -135,9 +135,11 @@ export default function VerificationChecklistTab({
       });
     }
 
-    // Load classifiers for the next step
+    // Load classifiers for the next step — EXCLUDE the verifier themselves
     const classRes: any = await fetch(`/api/users/by-step?step=under_verification`).then(r => r.json());
-    setClassifiers(classRes.users || []);
+    // Filter out the current verifier so classification is always a different person
+    const classifierList = (classRes.users || []).filter((u: any) => u.id !== currentUser?.id);
+    setClassifiers(classifierList);
     setSubmitted(true);
     setSavedData(verificationData);
     setSubmitting(false);
@@ -352,7 +354,7 @@ export default function VerificationChecklistTab({
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 <h3 className="text-base font-semibold text-gray-900">Verification Complete!</h3>
               </div>
-              <p className="text-xs text-gray-500">Now assign this case to a classifier (Hub Analyst) to continue.</p>
+              <p className="text-xs text-gray-500">Select a different person to classify this case. The classifier cannot be the same person who verified it.</p>
             </div>
             <div className="px-6 py-4 space-y-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
@@ -362,7 +364,7 @@ export default function VerificationChecklistTab({
                 <label className="block text-xs font-medium text-gray-700 mb-1">Assign to Classifier <span className="text-red-500">*</span></label>
                 <select value={selectedClassifier} onChange={e => setSelectedClassifier(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <option value="">Select a Hub Analyst to classify</option>
+                  <option value="">{classifiers.length === 0 ? "No other classifiers available — add more Hub Analysts in Settings" : "Select a classifier (must be different from verifier)"}</option>
                   {classifiers.map((u: any) => (
                     <option key={u.id} value={u.id}>{u.name} — {u.role?.replace(/_/g," ")} {u.province ? `(${u.province})` : "(National)"}</option>
                   ))}
