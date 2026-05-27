@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
+import TimelineTab from "@/components/case-tabs/TimelineTab";
+import ActionPlanTab from "@/components/case-tabs/ActionPlanTab";
+import EvidenceTab from "@/components/case-tabs/EvidenceTab";
+import EscalationsTab from "@/components/case-tabs/EscalationsTab";
+import AuditLogTab from "@/components/case-tabs/AuditLogTab";
   ArrowLeft, AlertTriangle, Clock, Calendar, MapPin, Building2,
   User, FileText, Activity, CheckCircle, XCircle, ChevronDown,
   MessageSquare, Paperclip, Shield, AlertCircle, UserPlus, Save, X,
