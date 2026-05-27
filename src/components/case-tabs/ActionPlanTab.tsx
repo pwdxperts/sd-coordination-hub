@@ -80,10 +80,40 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
     );
   }
 
-  // Step 2 (under_verification): Show classification form + verification summary from Step 1
-  // Also show read-only classification summary for all subsequent steps
-  if (caseStatus === "under_verification" ||
-      (caseData?.actionPlan?.startsWith("VERIFICATION:") && caseStatus !== "new_submission")) {
+  // Step 2 (under_verification):
+  // If verification data exists → classification form (verification is DONE)
+  // If no verification data → still show verification checklist (NOT yet verified)
+  const verificationDone = caseData?.actionPlan?.startsWith("VERIFICATION:");
+
+  if (caseStatus === "under_verification" && !verificationDone) {
+    // Verification has NOT been completed yet — show the checklist
+    return (
+      <VerificationChecklist
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onVerified={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  if (caseStatus === "under_verification" && verificationDone) {
+    // Verification IS done — show classification form
+    return (
+      <ClassificationTab
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onClassified={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  // classified+ steps: show read-only ClassificationTab summary for classified,
+  // CoordinatorPlanTab for classified/assigned, etc. handled below
+  if (verificationDone && !["classified","assigned","action_plan","intervention","monitoring","resolved","closed"].includes(caseStatus)) {
     return (
       <ClassificationTab
         caseId={caseId}
