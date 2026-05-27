@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   Eye, CheckCircle, XCircle, Filter, Merge, MessageSquare, X,
   Search, RefreshCw, Download, RotateCcw, AlertTriangle,
-  GitMerge, ChevronDown, Plus, Inbox,
+  GitMerge, ChevronDown, Plus, Inbox, Upload, FileSpreadsheet, ChevronRight, CheckCircle2, Circle as CircleIcon,
 } from "lucide-react";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -98,6 +98,13 @@ export default function IntakeQueuePage() {
   const [mergeSubmitting, setMergeSubmitting] = useState(false);
 
   const [classifyModal, setClassifyModal] = useState<any>(null);
+  const [importModal, setImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importRows, setImportRows] = useState<any[]>([]);
+  const [importParsing, setImportParsing] = useState(false);
+  const [importRunning, setImportRunning] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importHistory, setImportHistory] = useState<any[]>([]);
   const [classifyData, setClassifyData] = useState({ severity: "Moderate", sector: "", province: "" });
   const [classifySubmitting, setClassifySubmitting] = useState(false);
 
@@ -258,6 +265,72 @@ export default function IntakeQueuePage() {
     setClassifySubmitting(false);
   };
 
+  const parseImportFile = async (file: File) => {
+    setImportParsing(true);
+    setImportRows([]);
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    try {
+      if (ext === "csv") {
+        const text = await file.text();
+        const lines = text.split("\n").filter(l => l.trim());
+        const headers = lines[0].split(",").map(h => h.replace(/["\']/g,"").trim());
+        const rows = lines.slice(1).map(line => {
+          // Handle quoted CSV values
+          const vals: string[] = [];
+          let cur = "", inQ = false;
+          for (const ch of line) {
+            if (ch === "\"") inQ = !inQ;
+            else if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; }
+            else cur += ch;
+          }
+          vals.push(cur.trim());
+          const obj: any = {};
+          headers.forEach((h, i) => obj[h] = vals[i] || "");
+          return obj;
+        }).filter(r => Object.values(r).some(v => v));
+        setImportRows(rows);
+      } else {
+        // Excel: use SheetJS via dynamic import
+        const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs" as any);
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        setImportRows(rows as any[]);
+      }
+    } catch (e: any) {
+      showToast("error", `Parse error: ${e.message}`);
+    }
+    setImportParsing(false);
+  };
+
+  const runImport = async () => {
+    if (!importRows.length) return;
+    setImportRunning(true);
+    const BATCH = 50;
+    let totalCreated = 0, totalSkipped = 0, totalErrors = 0;
+    const allResults: any[] = [];
+    for (let i = 0; i < importRows.length; i += BATCH) {
+      const batch = importRows.slice(i, i + BATCH);
+      const res = await fetch("/api/cases/import", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: batch }),
+      });
+      const d: any = await res.json();
+      if (d.summary) {
+        totalCreated += d.summary.created;
+        totalSkipped += d.summary.skipped;
+        totalErrors += d.summary.errors;
+        allResults.push(...(d.results || []));
+      }
+    }
+    const result = { file: importFile?.name, date: new Date().toLocaleString("en-ZA"), total: importRows.length, created: totalCreated, skipped: totalSkipped, errors: totalErrors, results: allResults };
+    setImportResult(result);
+    setImportHistory(prev => [result, ...prev].slice(0, 10));
+    setImportRunning(false);
+    if (totalCreated > 0) loadCases();
+  };
+
   const exportCSV = () => {
     const headers = ["Reference", "Title", "Status", "Severity", "Province", "Sector", "Channel", "Date"];
     const rows = filtered.map(c => [
@@ -286,6 +359,10 @@ export default function IntakeQueuePage() {
           </button>
           <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
             <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+          <button onClick={() => { setImportModal(true); setImportFile(null); setImportRows([]); setImportResult(null); }}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100">
+            <Upload className="w-3.5 h-3.5" /> Import Excel / CSV
           </button>
           <Link href="/dashboard/cases/new" className="flex items-center gap-1.5 px-3 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
             <Plus className="w-3.5 h-3.5" /> Log Case
@@ -643,6 +720,163 @@ export default function IntakeQueuePage() {
                 <GitMerge className="w-3.5 h-3.5" />
                 {mergeSubmitting ? "Merging..." : "Confirm Merge"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── IMPORT MODAL ──────────────────────────────────────────────────── */}
+      {importModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !importRunning && setImportModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
+              <div>
+                <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">Bulk Import</p>
+                <h3 className="text-base font-semibold text-gray-900">Import Cases from Excel or CSV</h3>
+              </div>
+              {!importRunning && <button onClick={() => setImportModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>}
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              {/* File format guide */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-blue-900 mb-2">Accepted File Formats</p>
+                <div className="grid grid-cols-2 gap-3 text-xs text-blue-800">
+                  <div><p className="font-medium mb-1">Excel (.xlsx / .xls)</p><p>Each row = one case. Headers in row 1.</p></div>
+                  <div><p className="font-medium mb-1">CSV (.csv)</p><p>Comma-separated. First row = column headers.</p></div>
+                </div>
+                <p className="text-xs text-blue-700 mt-2 font-medium">Recognised column headers (case-insensitive):</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {["title","province","district","municipality","ward","sector","severity","channel","reporter","contact","description","reference"].map(h=>(
+                    <span key={h} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono text-[10px]">{h}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* File picker */}
+              {!importResult ? (
+                <>
+                  <label className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-8 cursor-pointer transition-all ${importFile ? "border-green-400 bg-green-50" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50"}`}>
+                    <FileSpreadsheet className={`w-10 h-10 ${importFile ? "text-green-500" : "text-gray-300"}`} />
+                    {importFile ? (
+                      <div className="text-center">
+                        <p className="text-sm font-semibold text-green-800">{importFile.name}</p>
+                        <p className="text-xs text-green-600">{(importFile.size/1024).toFixed(1)} KB — {importParsing ? "Parsing..." : `${importRows.length} rows detected`}</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-600">Drop your Excel or CSV file here</p>
+                        <p className="text-xs text-gray-400 mt-0.5">or click to browse</p>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept=".xlsx,.xls,.csv"
+                      onChange={e => { const f=e.target.files?.[0]; if(f){setImportFile(f); parseImportFile(f);}}} />
+                  </label>
+
+                  {/* Preview */}
+                  {importRows.length > 0 && !importParsing && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Preview — First 5 Rows ({importRows.length} total)</p>
+                      <div className="overflow-x-auto rounded-lg border border-gray-200">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                              {Object.keys(importRows[0]).slice(0,7).map(k=>(
+                                <th key={k} className="px-3 py-2 text-left text-gray-500 font-medium whitespace-nowrap">{k}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importRows.slice(0,5).map((row,i)=>(
+                              <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                                {Object.values(row).slice(0,7).map((val,j)=>(
+                                  <td key={j} className="px-3 py-1.5 text-gray-700 truncate max-w-[120px]">{String(val||"")}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Import button */}
+                  {importRows.length > 0 && (
+                    <button onClick={runImport} disabled={importRunning || importParsing}
+                      className="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                      {importRunning ? <><RefreshCw className="w-4 h-4 animate-spin" />Importing {importRows.length} rows...</>
+                        : <><Upload className="w-4 h-4" />Import {importRows.length} Cases</>}
+                    </button>
+                  )}
+                </>
+              ) : (
+                /* Results */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-green-700">{importResult.created}</p>
+                      <p className="text-xs text-green-600 mt-0.5">Cases Created</p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-700">{importResult.skipped}</p>
+                      <p className="text-xs text-amber-600 mt-0.5">Skipped (Duplicates)</p>
+                    </div>
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-bold text-red-700">{importResult.errors}</p>
+                      <p className="text-xs text-red-600 mt-0.5">Errors</p>
+                    </div>
+                  </div>
+
+                  {/* Row-level results */}
+                  {importResult.results?.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr><th className="px-3 py-2 text-left text-gray-500">Row</th><th className="px-3 py-2 text-left text-gray-500">Status</th><th className="px-3 py-2 text-left text-gray-500">Reference</th><th className="px-3 py-2 text-left text-gray-500">Reason</th></tr>
+                        </thead>
+                        <tbody>
+                          {importResult.results.map((r: any, i: number) => (
+                            <tr key={i} className={`border-b border-gray-50 ${r.status==="created"?"bg-green-50/50":r.status==="error"?"bg-red-50/50":"bg-amber-50/50"}`}>
+                              <td className="px-3 py-1.5 text-gray-500">{r.row}</td>
+                              <td className="px-3 py-1.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.status==="created"?"bg-green-100 text-green-700":r.status==="error"?"bg-red-100 text-red-700":"bg-amber-100 text-amber-700"}`}>{r.status}</span></td>
+                              <td className="px-3 py-1.5 font-mono text-gray-700">{r.ref||"—"}</td>
+                              <td className="px-3 py-1.5 text-gray-500 truncate max-w-[200px]">{r.reason||""}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button onClick={() => { setImportFile(null); setImportRows([]); setImportResult(null); }}
+                      className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200">Import Another File</button>
+                    <button onClick={() => setImportModal(false)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Done</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Import History */}
+              {importHistory.length > 0 && !importResult && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Import History (This Session)</p>
+                  <div className="space-y-1.5">
+                    {importHistory.map((h: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-xs">
+                        <div>
+                          <p className="font-medium text-gray-700">{h.file}</p>
+                          <p className="text-gray-400">{h.date}</p>
+                        </div>
+                        <div className="flex gap-2 text-right">
+                          <span className="text-green-600 font-medium">{h.created} created</span>
+                          <span className="text-amber-500">{h.skipped} skipped</span>
+                          {h.errors>0 && <span className="text-red-500">{h.errors} errors</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
