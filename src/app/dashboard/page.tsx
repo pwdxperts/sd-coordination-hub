@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import ProvincialDashboard from "@/components/ProvincialDashboard";
 import { useRouter } from "next/navigation";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -168,6 +169,11 @@ export default function DashboardPage() {
     amber: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
     purple: "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
   };
+
+  // Provincial coordinators see their own focused dashboard
+  if (stats?.scope) {
+    return <ProvincialDashboard stats={stats} user={currentUser} />;
+  }
 
   return (
     <div className="space-y-6">
