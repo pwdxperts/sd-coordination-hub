@@ -26,53 +26,47 @@ export async function POST(request: NextRequest) {
   if (step === "init") {
     const results: any = { provinces: 0, sectors: 0, districts: 0, municipalities: 0, users: 0 };
 
-    // Provinces
-    for (const name of PROVINCES) {
-      await prisma.province.upsert({ where: { name }, update: {}, create: { name } });
-      results.provinces++;
-    }
+    // Provinces + sectors (createMany - single query each)
+    await prisma.province.createMany({ data: PROVINCES.map(name => ({ name })), skipDuplicates: true });
+    await prisma.sector.createMany({ data: SECTORS.map(name => ({ name, active: true })), skipDuplicates: true });
+    results.provinces = PROVINCES.length;
+    results.sectors = SECTORS.length;
 
-    // Sectors
-    for (const name of SECTORS) {
-      await prisma.sector.upsert({ where: { name }, update: {}, create: { name, active: true } });
-      results.sectors++;
-    }
-
-    // Pre-build district/municipality from all batches
-    const provinceMap: Record<string, string> = {};
     const allProvinces = await prisma.province.findMany({ select: { id: true, name: true } });
+    const provinceMap: Record<string, string> = {};
     for (const p of allProvinces) provinceMap[p.name] = p.id;
 
+    // Collect unique districts per province
     const allCases = BATCHES.flat();
-    const districtsSeen = new Set<string>();
-    const munisSeen = new Set<string>();
-
+    const districtSet = new Map<string, { name: string; provinceId: string }>();
     for (const c of allCases) {
       if (!c.province || !c.district || !provinceMap[c.province]) continue;
-      const distKey = `${c.province}::${c.district}`;
-      if (!districtsSeen.has(distKey)) {
-        districtsSeen.add(distKey);
-        await prisma.district.upsert({
-          where: { name_provinceId: { name: c.district, provinceId: provinceMap[c.province] } },
-          update: {}, create: { name: c.district, provinceId: provinceMap[c.province] },
-        });
-        results.districts++;
-      }
-      if (c.municipality) {
-        const d = await prisma.district.findFirst({ where: { name: c.district, provinceId: provinceMap[c.province] }, select: { id: true } });
-        if (d) {
-          const muniKey = `${distKey}::${c.municipality}`;
-          if (!munisSeen.has(muniKey)) {
-            munisSeen.add(muniKey);
-            await prisma.municipality.upsert({
-              where: { name_districtId: { name: c.municipality, districtId: d.id } },
-              update: {}, create: { name: c.municipality, districtId: d.id },
-            });
-            results.municipalities++;
-          }
-        }
-      }
+      const key = `${provinceMap[c.province]}::${c.district}`;
+      if (!districtSet.has(key)) districtSet.set(key, { name: c.district, provinceId: provinceMap[c.province] });
     }
+
+    // Insert all districts in one query
+    await prisma.district.createMany({ data: Array.from(districtSet.values()), skipDuplicates: true });
+    results.districts = districtSet.size;
+
+    const allDistricts = await prisma.district.findMany({ select: { id: true, name: true, provinceId: true } });
+    const districtMap: Record<string, string> = {};
+    for (const d of allDistricts) districtMap[`${d.provinceId}::${d.name}`] = d.id;
+
+    // Collect unique municipalities per district
+    const muniSet = new Map<string, { name: string; districtId: string }>();
+    for (const c of allCases) {
+      if (!c.province || !c.district || !c.municipality || !provinceMap[c.province]) continue;
+      const provId = provinceMap[c.province];
+      const distId = districtMap[`${provId}::${c.district}`];
+      if (!distId) continue;
+      const key = `${distId}::${c.municipality}`;
+      if (!muniSet.has(key)) muniSet.set(key, { name: c.municipality, districtId: distId });
+    }
+
+    // Insert all municipalities in one query
+    await prisma.municipality.createMany({ data: Array.from(muniSet.values()), skipDuplicates: true });
+    results.municipalities = muniSet.size;
 
     // Users
     const hash = await bcrypt.hash("CoGTA2026!", 10);
