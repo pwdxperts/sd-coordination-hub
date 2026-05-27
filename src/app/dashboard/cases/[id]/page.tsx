@@ -24,16 +24,16 @@ const TABS = [
 ];
 
 // Dynamic label for the action_plan tab based on case status
-function getActionTabLabel(status: string): string {
+function getActionTabLabel(status: string, verified?: boolean): string {
+  if (status === "under_verification") return verified ? "✓ Classify" : "✓ Verify";
   const labels: Record<string, string> = {
-    new_submission:     "✓ Verify",
-    under_verification: "✓ Classify",
-    classified:         "Assign",
-    assigned:           "Action Plan",
-    action_plan:        "Intervention",
-    intervention:       "Update Progress",
-    monitoring:         "Resolve",
-    escalated:          "Respond",
+    new_submission:  "✓ Verify",
+    classified:      "Action Plan",
+    assigned:        "Action Plan",
+    action_plan:     "Intervention",
+    intervention:    "Update Progress",
+    monitoring:      "✓ Resolve",
+    escalated:       "Respond",
   };
   return labels[status] || "Action Plan";
 }
@@ -76,10 +76,10 @@ const STEP_GUIDANCE: Record<string, { title: string; description: string; myJob:
     color: "blue",
   },
   under_verification: {
-    title: "Step 2 — Classification",
-    description: "This case has been verified and needs to be classified.",
-    myJob: "Set the correct Severity Level (Critical/High/Moderate/Stable), confirm the Sector and Province, then click ✓ Classify Case to advance it for assignment.",
-    color: "purple",
+    title: "Step 2 — Verification in Progress",
+    description: "This case has been assigned for verification. The verifier must complete the checklist, capture GPS and upload evidence before it can be classified.",
+    myJob: "Open the ✓ Verify tab — complete the 7-item checklist, capture GPS coordinates, upload at least one photo or report, then click Submit Verification & Assign to Classifier.",
+    color: "blue",
   },
   classified: {
     title: "Step 3 — Assignment",
@@ -403,7 +403,13 @@ export default function CaseDetailPage() {
           <p className="text-xs font-medium text-gray-500">Next workflow actions</p>
           <div className="flex flex-wrap justify-start sm:justify-end gap-2">
             {nextActions.length > 0 ? (
-              nextActions.map((status) => (
+              nextActions
+                // Hide "Classify" button if verification hasn't been completed yet
+                .filter((status: string) => {
+                  if (status === "classified" && caseData?.status === "under_verification" && !caseData?.actionPlan?.startsWith("VERIFICATION:")) return false;
+                  return true;
+                })
+                .map((status: string) => (
                 <button
                   key={status}
                   onClick={() => handleStatusChange(status)}
@@ -651,7 +657,7 @@ export default function CaseDetailPage() {
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const tabLabel = tab.id === "action_plan" && caseData ? getActionTabLabel(caseData.status) : tab.label;
+          const tabLabel = tab.id === "action_plan" && caseData ? getActionTabLabel(caseData.status, caseData.actionPlan?.startsWith("VERIFICATION:")) : tab.label;
           return (
             <button
               key={tab.id}
