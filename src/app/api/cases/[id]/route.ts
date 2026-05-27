@@ -80,6 +80,7 @@ export async function PATCH(
       intervention: ["monitoring", "escalated"],
       monitoring: ["resolved", "escalated"],
       escalated: ["intervention", "resolved"],
+      rejected: ["new_submission", "under_verification"],
       resolved: ["closed", "reopened"],
       closed: ["reopened"],
       reopened: ["action_plan", "intervention"],
@@ -112,7 +113,8 @@ export async function PATCH(
       "responsibleSphere", "departmentId", "implementingAgent",
       "accountableOfficial", "contactDetails", "assignedToId", "ownerId",
       "actionPlan", "actionPlanDueDate", "interventionPlan",
-      "progressPercent", "blockers", "resolutionNotes",
+      "progressPercent", "blockers", "resolutionNotes", "closeOutStatus",
+      "isDuplicate", "linkedCaseId", "duplicatedFromId",
     ];
 
     for (const field of allowedFields) {
