@@ -1,6 +1,7 @@
 "use client";
 import VerificationChecklist from "@/components/case-tabs/VerificationChecklist";
 import ClassificationTab from "@/components/case-tabs/ClassificationTab";
+import CoordinatorPlanTab from "@/components/case-tabs/CoordinatorPlanTab";
 import { useState, useEffect } from "react";
 import { Save, ArrowRight, CheckCircle } from "lucide-react";
 
@@ -88,6 +89,21 @@ export default function ActionPlanTab({ caseId, caseStatus, currentUser, caseDat
         currentUser={currentUser}
         caseData={caseData}
         onClassified={() => { window.location.reload(); }}
+      />
+    );
+  }
+
+  // Steps 3–7 (classified, assigned, action_plan, intervention, monitoring, resolved):
+  // Show coordinator plan tab with full context from Steps 1 & 2
+  const coordinatorSteps = ["classified","assigned","action_plan","intervention","monitoring","resolved","closed"];
+  if (coordinatorSteps.includes(caseStatus)) {
+    return (
+      <CoordinatorPlanTab
+        caseId={caseId}
+        caseStatus={caseStatus}
+        currentUser={currentUser}
+        caseData={caseData}
+        onAdvanced={() => { window.location.reload(); }}
       />
     );
   }
