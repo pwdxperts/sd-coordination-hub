@@ -94,6 +94,8 @@ export default function SettingsPage() {
   const [integrationConfig, setIntegrationConfig] = useState<Record<string,string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
 
   // User tab state
   const [userSearch, setUserSearch] = useState("");
@@ -150,6 +152,24 @@ export default function SettingsPage() {
       setLoading(false);
     });
   }, []);
+
+  // ─── SEED USERS ───
+  const handleSeedUsers = async () => {
+    if (!confirm("This will create or update all 20 workflow test accounts. Continue?")) return;
+    setSeeding(true);
+    const res = await fetch("/api/seed/users", {
+      method: "POST",
+      headers: { "x-seed-secret": "CoGTA-seed-2026" },
+    });
+    const data = await res.json();
+    setSeedResult(data);
+    if (data.success) {
+      // Reload users list
+      const u = await fetch("/api/auth/users").then(r => r.ok ? r.json() : {});
+      setUsers(Array.isArray(u.users) ? u.users : []);
+    }
+    setSeeding(false);
+  };
 
   // ─── USER ACTIONS ───
   const handleAddUser = async () => {
@@ -379,13 +399,35 @@ export default function SettingsPage() {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-sm font-semibold text-gray-700">User Management</h3>
+              <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowAddUser(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 w-fit"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
               >
                 <UserPlus className="w-3.5 h-3.5" /> Add User
               </button>
+              <button
+                onClick={handleSeedUsers}
+                disabled={seeding}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-50"
+                title="Create all 20 workflow test accounts"
+              >
+                {seeding ? "Creating..." : "⚡ Seed Test Users"}
+              </button>
             </div>
+            </div>
+
+            {/* Seed Result */}
+            {seedResult && (
+              <div className={`mb-3 px-4 py-2.5 rounded-lg text-xs flex items-center justify-between ${seedResult.success ? "bg-green-50 border border-green-200 text-green-800" : "bg-red-50 border border-red-200 text-red-800"}`}>
+                <span>
+                  {seedResult.success
+                    ? `✓ ${seedResult.summary?.created} accounts created/updated successfully (${seedResult.summary?.failed} failed)`
+                    : `Error: ${seedResult.error}`}
+                </span>
+                <button onClick={() => setSeedResult(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+              </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2 mb-4">
