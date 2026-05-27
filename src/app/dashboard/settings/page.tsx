@@ -165,7 +165,7 @@ export default function SettingsPage() {
     setSeedResult(data);
     if (data.success) {
       // Reload users list
-      const u = await fetch("/api/auth/users").then(r => r.ok ? r.json() : {});
+      const u: any = await fetch("/api/auth/users").then(r => r.ok ? r.json() : {});
       setUsers(Array.isArray(u.users) ? u.users : []);
     }
     setSeeding(false);
