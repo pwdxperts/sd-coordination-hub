@@ -137,7 +137,7 @@ export default function SettingsPage() {
       fetch("/api/escalation-rules").then(r => r.ok ? r.json() : {}),
       fetch("/api/departments").then(r => r.ok ? r.json() : {}),
       fetch("/api/config").then(r => r.ok ? r.json() : {}),
-    ]).then(([u, sec, cat, sla, rules, depts, cfg]) => {
+    ]).then(([u, sec, cat, sla, rules, depts, cfg]: any[]) => {
       setUsers(Array.isArray(u.users) ? u.users : []);
       setSectors(Array.isArray(sec.sectors) ? sec.sectors : []);
       setCategories(Array.isArray(cat.categories) ? cat.categories : []);
