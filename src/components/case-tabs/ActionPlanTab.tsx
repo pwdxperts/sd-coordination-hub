@@ -1,6 +1,6 @@
 "use client";
 import VerificationChecklist from "@/components/case-tabs/VerificationChecklist";
-mport { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Save, ArrowRight, CheckCircle } from "lucide-react";
 
 const NEXT_STATUS: Record<string,string> = {
